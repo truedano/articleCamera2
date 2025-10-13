@@ -1,9 +1,13 @@
 package com.truedano.articlecamera2
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.truedano.articlecamera2.ui.CameraScreen
@@ -19,9 +23,29 @@ class MainActivity : ComponentActivity() {
         val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
         windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         
+        // Register the permission launcher
+        val requestPermissionLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { isGranted: Boolean ->
+            // Callback for permission result - handled by the composable
+        }
+        
         setContent {
             ArticleCamera2Theme {
-                CameraScreen()
+                CameraScreen(
+                    onNeedPermission = { 
+                        if (ContextCompat.checkSelfPermission(
+                                this, 
+                                Manifest.permission.CAMERA
+                            ) != PackageManager.PERMISSION_GRANTED) {
+                            requestPermissionLauncher.launch(Manifest.permission.CAMERA)
+                        }
+                    },
+                    hasCameraPermission = ContextCompat.checkSelfPermission(
+                        this, 
+                        Manifest.permission.CAMERA
+                    ) == PackageManager.PERMISSION_GRANTED
+                )
             }
         }
     }
