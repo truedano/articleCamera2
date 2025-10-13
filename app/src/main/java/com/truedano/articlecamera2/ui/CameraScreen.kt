@@ -155,7 +155,7 @@ fun CameraScreen(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .height(120.dp)
+                .height(130.dp)
                 .background(DarkCharcoalBackground)
                 .windowInsetsPadding(WindowInsets.navigationBars)
         ) {
@@ -226,7 +226,7 @@ fun CameraScreen(
             },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .offset(y = (-20).dp)
+                .offset(y = (-50).dp)
                 .size(72.dp)
                 .border(3.dp, LightGrayBorder, CircleShape)
                 .zIndex(1f),
