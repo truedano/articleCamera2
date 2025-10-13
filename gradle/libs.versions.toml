@@ -31,9 +31,6 @@ androidx-compose-material-icons-extended = { group = "androidx.compose.material"
 androidx-camera-camera2 = { group = "androidx.camera", name = "camera-camera2", version.ref = "camera" }
 androidx-camera-lifecycle = { group = "androidx.camera", name = "camera-lifecycle", version.ref = "camera" }
 androidx-camera-view = { group = "androidx.camera", name = "camera-view", version.ref = "camera" }
-androidx-camera-core = { group = "androidx.camera", name = "camera-core", version.ref = "camera" }
-androidx-camera-extensions = { group = "androidx.camera", name = "camera-extensions", version.ref = "camera" }
-androidx-camera-imagecapture = { group = "androidx.camera", name = "camera-image-capture", version.ref = "camera" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
