@@ -272,7 +272,7 @@ fun CameraPreview(
                     val preview = Preview.Builder()
                         .build()
                         .also {
-                            it.setSurfaceProvider(previewView.surfaceProvider)
+                            it.surfaceProvider = previewView.surfaceProvider
                         }
                     
                     // 設置圖片捕獲用例
