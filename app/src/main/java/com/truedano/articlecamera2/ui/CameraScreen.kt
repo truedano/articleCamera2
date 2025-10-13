@@ -6,21 +6,30 @@ import androidx.camera.core.CameraSelector
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.PhotoCamera
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -30,122 +39,144 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.zIndex
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.truedano.articlecamera2.ui.theme.BlueAccent
+import com.truedano.articlecamera2.ui.theme.DarkCharcoalBackground
+import com.truedano.articlecamera2.ui.theme.DarkGrayBackground
+import com.truedano.articlecamera2.ui.theme.GrayText
+import com.truedano.articlecamera2.ui.theme.LightGrayBorder
 import java.util.concurrent.ExecutionException
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun CameraScreen() {
-    // 定義顏色
-    val darkBackgroundColor = Color(0xFF000000) // 深黑色
-    Color(0xFF333333) // 深灰色
-    val blueColor = Color(0xFF2196F3) // 藍色
-    val grayColor = Color(0xFF888888) // 灰色
-    
-    Scaffold(
-        topBar = {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(DarkGrayBackground)
+    ) {
+        // 主要內容
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .windowInsetsPadding(WindowInsets.statusBars)
+        ) {
+            // 頂部應用欄
             TopAppBar(
                 title = {
-                    Text(
-                        text = "Article Camera",
-                        color = Color.White
-                    )
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = darkBackgroundColor
-                )
-            )
-        },
-        bottomBar = {
-            NavigationBar(
-                modifier = Modifier.height(80.dp),
-                containerColor = darkBackgroundColor
-            ) {
-                // API Key 項目 (未選中)
-                NavigationBarItem(
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = "API Key",
-                            tint = grayColor
-                        )
-                    },
-                    label = {
-                        Text(
-                            text = "API Key",
-                            color = grayColor,
-                            textAlign = TextAlign.Center
-                        )
-                    },
-                    selected = false,
-                    onClick = { /* API Key 頁面導航 */ }
-                )
-                
-                // Camera 項目 (選中)
-                NavigationBarItem(
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Default.PhotoCamera,
-                            contentDescription = "Camera",
-                            tint = blueColor
-                        )
-                    },
-                    label = {
-                        Text(
-                            text = "Camera",
-                            color = blueColor,
-                            textAlign = TextAlign.Center
-                        )
-                    },
-                    selected = true,
-                    onClick = { /* Camera 頁面導航 */ }
-                )
-            }
-        },
-        content = { innerPadding ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-            ) {
-                // 主要內容區域 - 相機預覽
-                CameraPreview(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                )
-                
-                // 快門按鈕
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 20.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    FloatingActionButton(
-                        onClick = { /* 拍照功能 */ },
-                        containerColor = blueColor,
-                        contentColor = Color.White,
-                        modifier = Modifier
-                            .size(80.dp)
-                            .padding(8.dp),
-                        shape = androidx.compose.foundation.shape.CircleShape
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
                     ) {
-                        // 這裡可以放置拍照圖標
-                        Icon(
-                            imageVector = Icons.Default.PhotoCamera,
-                            contentDescription = "Take Photo",
-                            modifier = Modifier.size(40.dp)
+                        Text(
+                            text = "Article Camera",
+                            color = Color.White,
+                            textAlign = TextAlign.Center
                         )
                     }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = DarkCharcoalBackground
+                ),
+                windowInsets = WindowInsets(0, 0, 0, 0)
+            )
+            
+            // 相機預覽區域
+            CameraPreview(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .background(DarkGrayBackground)
+            )
+        }
+        
+        // 底部導航欄
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .height(80.dp)
+                .background(DarkCharcoalBackground)
+                .windowInsetsPadding(WindowInsets.navigationBars)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(80.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // API Key 項目 (左側)
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .clickable { /* API Key 頁面導航 */ }
+                        .padding(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Key,
+                        contentDescription = "API Key",
+                        tint = GrayText,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Text(
+                        text = "API Key",
+                        color = GrayText,
+                        fontSize = 12.sp,
+                        textAlign = TextAlign.Center
+                    )
+                }
+                
+                // 中間空白區域，為快門按鈕預留空間
+                Box(modifier = Modifier.size(80.dp))
+                
+                // Camera 項目 (右側)
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .clickable { /* Camera 頁面導航 */ }
+                        .padding(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.PhotoCamera,
+                        contentDescription = "Camera",
+                        tint = BlueAccent,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Text(
+                        text = "Camera",
+                        color = BlueAccent,
+                        fontSize = 12.sp,
+                        textAlign = TextAlign.Center
+                    )
                 }
             }
         }
-    )
+        
+        // 快門按鈕 (覆蓋在底部導航欄之上)
+        Button(
+            onClick = { /* 拍照功能 */ },
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .offset(y = (-20).dp)
+                .size(72.dp)
+                .border(3.dp, LightGrayBorder, CircleShape)
+                .zIndex(1f),
+            shape = CircleShape,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = BlueAccent
+            ),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
+        ) {
+            // 無圖示，純實心圓形按鈕
+        }
+    }
 }
 
 @Composable
