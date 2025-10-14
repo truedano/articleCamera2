@@ -64,8 +64,12 @@ import java.util.concurrent.ExecutionException
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun CameraScreen(
+    modifier: Modifier = Modifier,
     onNeedPermission: () -> Unit = {},
-    hasCameraPermission: Boolean = false
+    hasCameraPermission: Boolean = false,
+    onNavigateToApiKey: () -> Unit,
+    onNavigateToCamera: () -> Unit,
+    selectedScreen: String
 ) {
     var imageCapture by remember { mutableStateOf<ImageCapture?>(null) }
     val context = LocalContext.current
@@ -77,7 +81,7 @@ fun CameraScreen(
     }
 
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .background(DarkGrayBackground)
     ) {
@@ -166,22 +170,25 @@ fun CameraScreen(
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                val isCameraSelected = selectedScreen == "Camera"
+                val isApiKeySelected = selectedScreen == "API Key"
+
                 // API Key 項目 (左側)
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
-                        .clickable { /* API Key 頁面導航 */ }
+                        .clickable { onNavigateToApiKey() }
                         .padding(8.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Key,
                         contentDescription = "API Key",
-                        tint = GrayText,
+                        tint = if (isApiKeySelected) BlueAccent else GrayText,
                         modifier = Modifier.size(24.dp)
                     )
                     Text(
                         text = "API Key",
-                        color = GrayText,
+                        color = if (isApiKeySelected) BlueAccent else GrayText,
                         fontSize = 12.sp,
                         textAlign = TextAlign.Center
                     )
@@ -194,18 +201,18 @@ fun CameraScreen(
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
-                        .clickable { /* Camera 頁面導航 */ }
+                        .clickable { onNavigateToCamera() }
                         .padding(8.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.PhotoCamera,
                         contentDescription = "Camera",
-                        tint = BlueAccent,
+                        tint = if (isCameraSelected) BlueAccent else GrayText,
                         modifier = Modifier.size(24.dp)
                     )
                     Text(
                         text = "Camera",
-                        color = BlueAccent,
+                        color = if (isCameraSelected) BlueAccent else GrayText,
                         fontSize = 12.sp,
                         textAlign = TextAlign.Center
                     )
