@@ -1,5 +1,6 @@
 package com.truedano.articlecamera2.model
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Log
@@ -7,7 +8,7 @@ import com.google.ai.client.generativeai.GenerativeModel
 import com.google.ai.client.generativeai.type.content
 import java.io.FileInputStream
 
-class ImageToTextConverter {
+class ImageToTextConverter(private val context: Context) {
 
     companion object{
         private const val TAG = "ImageToTextConverter"
@@ -34,8 +35,9 @@ class ImageToTextConverter {
                 return "Error: Failed to load image"
             }
 
-            // Try model names that are currently available for image processing
-            val modelName = "gemini-2.5-flash"
+            // Get the model name from ApiKeyManager
+            val apiKeyManager = ApiKeyManager(context)
+            val modelName = apiKeyManager.getModel()
             
             var result: String? = null
             var lastException: Exception? = null

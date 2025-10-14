@@ -51,7 +51,7 @@ class CameraUtils {
                 contentValues
             ).build()
 
-            val imageToTextConverter = ImageToTextConverter()
+            val imageToTextConverter = ImageToTextConverter(context)
 
             // 設置照片捕獲的回調
             imageCapture.takePicture(

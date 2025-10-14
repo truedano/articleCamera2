@@ -16,13 +16,17 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -62,8 +66,12 @@ fun ApiKeyScreen(
     apiKeyViewModel: ApiKeyViewModel = viewModel()
 ) {
     val apiKey by apiKeyViewModel.apiKey.collectAsState()
+    val selectedModel by apiKeyViewModel.selectedModel.collectAsState()
     val validationState by apiKeyViewModel.validationState.collectAsState()
     var passwordVisible by remember { mutableStateOf(false) }
+    var expanded by remember { mutableStateOf(false) }
+
+    val availableModels = listOf("gemini-2.5-flash", "gemini-2.5-flash-lite")
 
     Scaffold(
         topBar = {
@@ -176,6 +184,57 @@ fun ApiKeyScreen(
                     unfocusedTrailingIconColor = GrayText
                 )
             )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Model Selection
+            Text("Gemini Model", color = Color.White)
+            Spacer(modifier = Modifier.height(8.dp))
+            ExposedDropdownMenuBox(
+                expanded = expanded,
+                onExpandedChange = { expanded = !expanded },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = selectedModel.ifEmpty { "gemini-2.5-flash" },
+                    onValueChange = { },
+                    readOnly = true,
+                    label = { Text("Select a model") },
+                    trailingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.ArrowDropDown,
+                            contentDescription = null
+                        )
+                    },
+                    modifier = Modifier.menuAnchor().fillMaxWidth(),
+                    colors = TextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        cursorColor = Color.White,
+                        focusedContainerColor = DarkGrayBackground,
+                        unfocusedContainerColor = DarkGrayBackground,
+                        focusedLabelColor = GrayText,
+                        unfocusedLabelColor = GrayText,
+                        focusedIndicatorColor = BlueAccent,
+                        unfocusedIndicatorColor = GrayText
+                    )
+                )
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    availableModels.forEach { model ->
+                        DropdownMenuItem(
+                            text = { Text(text = model) },
+                            onClick = {
+                                apiKeyViewModel.onModelChange(model)
+                                expanded = false
+                            }
+                        )
+                    }
+                }
+            }
+            
             Spacer(modifier = Modifier.height(8.dp))
             Button(
                 onClick = { apiKeyViewModel.validateApiKey() },

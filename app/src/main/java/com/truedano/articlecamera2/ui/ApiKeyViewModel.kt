@@ -18,18 +18,26 @@ class ApiKeyViewModel(application: Application) : AndroidViewModel(application) 
     private val _apiKey = MutableStateFlow("")
     val apiKey: StateFlow<String> = _apiKey.asStateFlow()
 
+    private val _selectedModel = MutableStateFlow("")
+    val selectedModel: StateFlow<String> = _selectedModel.asStateFlow()
+
     private val _validationState = MutableStateFlow<ValidationState>(ValidationState.Idle)
     val validationState: StateFlow<ValidationState> = _validationState.asStateFlow()
 
     init {
-        // Load the API key from SharedPreferences when the ViewModel is created
+        // Load the API key and model from SharedPreferences when the ViewModel is created
         _apiKey.value = apiKeyManager.getApiKey()
+        _selectedModel.value = apiKeyManager.getModel()
     }
 
     fun onApiKeyChange(newApiKey: String) {
         _apiKey.value = newApiKey
         // Reset validation state when the key changes
         _validationState.value = ValidationState.Idle
+    }
+
+    fun onModelChange(newModel: String) {
+        _selectedModel.value = newModel
     }
 
     fun validateApiKey() {
@@ -46,10 +54,15 @@ class ApiKeyViewModel(application: Application) : AndroidViewModel(application) 
 
     fun saveApiKey() {
         apiKeyManager.saveApiKey(_apiKey.value)
+        apiKeyManager.saveModel(_selectedModel.value)
     }
 
     fun getApiKey(): String {
         return apiKeyManager.getApiKey()
+    }
+
+    fun getModel(): String {
+        return apiKeyManager.getModel()
     }
 }
 
