@@ -1,10 +1,9 @@
 package com.truedano.articlecamera2.ui
 
 import android.app.Application
-import android.content.Context
-import androidx.core.content.edit
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.truedano.articlecamera2.model.ApiKeyManager
 import com.truedano.articlecamera2.model.GeminiApiKeyValidator
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,7 +13,7 @@ import kotlinx.coroutines.launch
 class ApiKeyViewModel(application: Application) : AndroidViewModel(application) {
 
     private val validator = GeminiApiKeyValidator()
-    private val sharedPreferences = application.getSharedPreferences("api_key_prefs", Context.MODE_PRIVATE)
+    private val apiKeyManager = ApiKeyManager(application)
 
     private val _apiKey = MutableStateFlow("")
     val apiKey: StateFlow<String> = _apiKey.asStateFlow()
@@ -24,7 +23,7 @@ class ApiKeyViewModel(application: Application) : AndroidViewModel(application) 
 
     init {
         // Load the API key from SharedPreferences when the ViewModel is created
-        _apiKey.value = sharedPreferences.getString("gemini_api_key", "") ?: ""
+        _apiKey.value = apiKeyManager.getApiKey()
     }
 
     fun onApiKeyChange(newApiKey: String) {
@@ -46,13 +45,11 @@ class ApiKeyViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun saveApiKey() {
-        sharedPreferences.edit {
-            putString("gemini_api_key", _apiKey.value)
-        }
+        apiKeyManager.saveApiKey(_apiKey.value)
     }
 
     fun getApiKey(): String {
-        return sharedPreferences.getString("gemini_api_key", "") ?: ""
+        return apiKeyManager.getApiKey()
     }
 }
 
