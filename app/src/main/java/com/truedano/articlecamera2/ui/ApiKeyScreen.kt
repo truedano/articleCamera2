@@ -19,6 +19,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -28,16 +29,15 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.truedano.articlecamera2.ui.theme.BlueAccent
 import com.truedano.articlecamera2.ui.theme.DarkCharcoalBackground
 import com.truedano.articlecamera2.ui.theme.DarkGrayBackground
@@ -50,9 +50,11 @@ fun ApiKeyScreen(
     onBack: () -> Unit,
     onNavigateToCamera: () -> Unit,
     onNavigateToApiKey: () -> Unit,
-    selectedScreen: String
+    selectedScreen: String,
+    apiKeyViewModel: ApiKeyViewModel = viewModel()
 ) {
-    var apiKey by remember { mutableStateOf("") }
+    val apiKey by apiKeyViewModel.apiKey.collectAsState()
+    val validationState by apiKeyViewModel.validationState.collectAsState()
 
     Scaffold(
         topBar = {
@@ -138,16 +140,33 @@ fun ApiKeyScreen(
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
                 value = apiKey,
-                onValueChange = { apiKey = it },
+                onValueChange = { apiKeyViewModel.onApiKeyChange(it) },
                 label = { Text("Enter your API key") },
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(8.dp))
             Button(
-                onClick = { /* TODO: Check API Key Valid */ },
+                onClick = { apiKeyViewModel.validateApiKey() },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Check API Key Valid")
+                when (validationState) {
+                    ValidationState.Loading -> {
+                        CircularProgressIndicator(color = Color.White)
+                    }
+                    else -> {
+                        Text("Check API Key Valid")
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            when (validationState) {
+                ValidationState.Success -> {
+                    Text("API Key is valid!", color = Color.Green)
+                }
+                ValidationState.Failure -> {
+                    Text("API Key is invalid.", color = Color.Red)
+                }
+                else -> { /* No text to show */ }
             }
             Spacer(modifier = Modifier.height(8.dp))
             Text(
@@ -163,7 +182,8 @@ fun ApiKeyScreen(
                 onClick = { onSave(apiKey) },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 16.dp)
+                    .padding(bottom = 16.dp),
+                enabled = validationState is ValidationState.Success
             ) {
                 Text("Save")
             }
