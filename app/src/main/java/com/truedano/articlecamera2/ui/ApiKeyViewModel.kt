@@ -50,6 +50,10 @@ class ApiKeyViewModel(application: Application) : AndroidViewModel(application) 
             putString("gemini_api_key", _apiKey.value)
         }
     }
+
+    fun getApiKey(): String {
+        return sharedPreferences.getString("gemini_api_key", "") ?: ""
+    }
 }
 
 sealed interface ValidationState {
