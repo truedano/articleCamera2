@@ -1,7 +1,6 @@
 package com.truedano.articlecamera2
 
 import android.Manifest
-import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -9,7 +8,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -62,14 +60,8 @@ class MainActivity : ComponentActivity() {
                         selectedScreen = selectedScreen
                     )
                     "API Key" -> {
-                        val apiKey by apiKeyViewModel.apiKey.collectAsState()
                         ApiKeyScreen(
                             onSave = {
-                                val sharedPref = getSharedPreferences("api_key_prefs", Context.MODE_PRIVATE)
-                                with(sharedPref.edit()) {
-                                    putString("gemini_api_key", apiKey)
-                                    apply()
-                                }
                                 selectedScreen = "Camera"
                             },
                             onBack = { selectedScreen = "Camera" },

@@ -46,7 +46,7 @@ import com.truedano.articlecamera2.ui.theme.GrayText
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ApiKeyScreen(
-    onSave: (String) -> Unit,
+    onSave: () -> Unit,
     onBack: () -> Unit,
     onNavigateToCamera: () -> Unit,
     onNavigateToApiKey: () -> Unit,
@@ -179,7 +179,10 @@ fun ApiKeyScreen(
             Spacer(modifier = Modifier.weight(1f))
 
             Button(
-                onClick = { onSave(apiKey) },
+                onClick = { 
+                    apiKeyViewModel.saveApiKey()
+                    onSave()
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 16.dp),
