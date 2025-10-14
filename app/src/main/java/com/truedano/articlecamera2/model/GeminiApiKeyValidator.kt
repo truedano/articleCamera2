@@ -17,7 +17,7 @@ class GeminiApiKeyValidator {
         return try {
             val generativeModel = GenerativeModel(
                 // Let's try the latest model to rule out model availability issues.
-                modelName = "gemini-1.5-pro-latest",
+                modelName = "gemini-2.5-flash-lite",
                 apiKey = apiKey
             )
             // A lightweight streaming call to validate the key and model access.
