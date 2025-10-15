@@ -266,11 +266,6 @@ fun CameraScreen(
 
 // 移除多餘的函數
 
-// 新增一個函數來處理拍照後的流程
-fun navigateToQuestionSettings() {
-    // 這個函數將在拍照完成後被調用，導向問題設定頁面
-}
-
 @Composable
 fun CameraPreview(
     modifier: Modifier = Modifier,

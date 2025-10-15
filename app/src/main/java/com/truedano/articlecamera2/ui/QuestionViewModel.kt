@@ -25,8 +25,7 @@ class QuestionViewModel(application: Application) : AndroidViewModel(application
     val isAnswering: StateFlow<Boolean> = _isAnswering.asStateFlow()
     
     private val _isGrading = MutableStateFlow(false)
-    val isGrading: StateFlow<Boolean> = _isGrading.asStateFlow()
-    
+
     private val _gradeResult = MutableStateFlow<GradeResult?>(null)
     val gradeResult: StateFlow<GradeResult?> = _gradeResult.asStateFlow()
     
@@ -111,15 +110,7 @@ class QuestionViewModel(application: Application) : AndroidViewModel(application
             )
         }
     }
-    
-    fun reset() {
-        _questionPaper.value = null
-        _currentQuestionIndex.value = 0
-        _userAnswers.value = emptyList()
-        _isAnswering.value = false
-        _isGrading.value = false
-        _gradeResult.value = null
-    }
+
 }
 
 data class GradeResult(

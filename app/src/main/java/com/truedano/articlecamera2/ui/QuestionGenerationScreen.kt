@@ -43,7 +43,6 @@ fun QuestionGenerationScreen(
     questionViewModel: QuestionViewModel = viewModel(),
     apiKeyViewModel: ApiKeyViewModel = viewModel()
 ) {
-    val articleText by articleQuestionViewModel.articleText.collectAsState()
     val grade by articleQuestionViewModel.selectedGrade.collectAsState()
     val questionCount by articleQuestionViewModel.selectedQuestionCount.collectAsState()
     val isGenerating by articleQuestionViewModel.isGenerating.collectAsState()

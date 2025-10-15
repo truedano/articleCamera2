@@ -169,15 +169,11 @@ class QuestionGenerator(private val context: Context) {
         } catch (e: Exception) {
             Log.e(TAG, "Error parsing generated questions: ${e.message}", e)
             // 尝试另一种解析方法，如果生成的内容包含JSON格式
-            tryAlternativeParsing(generatedText, sourceText, grade, questionCount)
+            tryAlternativeParsing()
         }
     }
     
     private fun tryAlternativeParsing(
-        generatedText: String,
-        sourceText: String,
-        grade: Int,
-        questionCount: Int
     ): QuestionPaper? {
         // 如果JSON解析失败，尝试使用正则表达式或其他方法解析
         // 这里实现一个简单的备用解析方法

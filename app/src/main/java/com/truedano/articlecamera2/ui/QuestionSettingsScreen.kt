@@ -26,7 +26,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -51,9 +51,9 @@ fun QuestionSettingsScreen(
     onGenerateQuestions: (grade: Int, questionCount: Int) -> Unit,
     articleQuestionViewModel: ArticleQuestionViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
-    val context = LocalContext.current
-    var selectedGrade by remember { mutableStateOf(1) }
-    var selectedQuestionCount by remember { mutableStateOf(5) }
+    LocalContext.current
+    var selectedGrade by remember { mutableIntStateOf(1) }
+    var selectedQuestionCount by remember { mutableIntStateOf(5) }
 
     // 初始化文章內容
     LaunchedEffect(articleText) {
