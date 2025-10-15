@@ -63,13 +63,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.truedano.articlecamera2.model.ApiConfig
 import com.truedano.articlecamera2.ui.theme.BlueAccent
 import com.truedano.articlecamera2.ui.theme.DarkCharcoalBackground
 import com.truedano.articlecamera2.ui.theme.DarkGrayBackground
 import com.truedano.articlecamera2.ui.theme.GrayText
-
-// 定義可用的 Gemini 模型列表
-private val GEMINI_MODELS = listOf("gemini-2.5-flash", "gemini-2.5-flash-lite")
 
 // API Key 申請指南組件
 @Composable
@@ -91,8 +89,10 @@ fun ApiKeyGuideDialog(
                     color = BlueAccent
                 )
                 Text(
-                    text = "點擊下方連結前往 Google AI Studio 網站。",
-                    modifier = Modifier.padding(top = 4.dp)
+                    text = "點擊連結前往 Google AI Studio 網站。",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp)
                 )
                 
                 Text(
@@ -210,93 +210,20 @@ fun ApiKeyScreen(
                 .fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // API Key 輸入區域
-            ApiKeyInputSection(
+            // 表單區域
+            FormSection(
                 apiKey = apiKey,
                 passwordVisible = passwordVisible,
                 onPasswordVisibilityChange = { passwordVisible = !passwordVisible },
-                onApiKeyChange = { apiKeyViewModel.onApiKeyChange(it) }
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 模型選擇區域
-            ModelSelectionSection(
+                onApiKeyChange = { apiKeyViewModel.onApiKeyChange(it) },
                 selectedModel = selectedModel,
                 expanded = expanded,
                 onExpandedChange = { newExpanded -> expanded = newExpanded },
-                onModelChange = { apiKeyViewModel.onModelChange(it) }
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 驗證按鈕
-            ValidateApiKeyButton(
+                onModelChange = { apiKeyViewModel.onModelChange(it) },
                 validationState = validationState,
-                onClick = { apiKeyViewModel.validateApiKey() }
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // 驗證結果顯示
-            ValidationResultMessage(validationState = validationState)
-
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            // API 金鑰說明
-            Text(
-                text = "You can obtain your Gemini API key from the",
-                color = GrayText,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 16.dp)
-            )
-            
-            Spacer(modifier = Modifier.height(4.dp))
-            
-            // 可點擊的連結文字
-            val context = LocalContext.current
-            Text(
-                text = buildAnnotatedString {
-                    withStyle(style = androidx.compose.ui.text.SpanStyle(color = BlueAccent)) {
-                        append("Google AI Studio website")
-                    }
-                },
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .padding(vertical = 4.dp)
-                    .clickable {
-                        val intent = Intent(Intent.ACTION_VIEW, "https://aistudio.google.com/app/apikey".toUri())
-                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        context.startActivity(intent)
-                    }
-            )
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            // 如何申請 API Key 按鈕
-            Button(
-                onClick = { showApiKeyGuide = true },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Help,
-                        contentDescription = "Help",
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("如何申請 API Key？")
-                }
-            }
-            
-            Spacer(modifier = Modifier.weight(1f))
-
-            // 保存按鈕
-            SaveButton(
-                validationState = validationState,
-                onClick = {
+                onValidateClick = { apiKeyViewModel.validateApiKey() },
+                onShowGuide = { showApiKeyGuide = true },
+                onSaveClick = {
                     apiKeyViewModel.saveApiKey()
                     onSave()
                 }
@@ -370,7 +297,7 @@ private fun ModelSelectionSection(
         modifier = Modifier.fillMaxWidth()
     ) {
         OutlinedTextField(
-            value = selectedModel.ifEmpty { GEMINI_MODELS.first() },
+            value = selectedModel.ifEmpty { ApiConfig.GEMINI_MODELS.first() },
             onValueChange = { },
             readOnly = true,
             label = { Text("Select a model") },
@@ -398,7 +325,7 @@ private fun ModelSelectionSection(
             onDismissRequest = { onExpandedChange(false) },
             modifier = Modifier.fillMaxWidth()
         ) {
-            GEMINI_MODELS.forEach { model ->
+            ApiConfig.GEMINI_MODELS.forEach { model ->
                 DropdownMenuItem(
                     text = { Text(text = model) },
                     onClick = {
@@ -427,7 +354,7 @@ private fun ValidateApiKeyButton(
                 CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp)
             }
             else -> {
-                Text("Check API Key Valid")
+                Text("驗證 API 金鑰")
             }
         }
     }
@@ -438,7 +365,7 @@ private fun ValidateApiKeyButton(
 private fun ValidationResultMessage(validationState: ValidationState) {
     when (validationState) {
         ValidationState.Success -> {
-            Text("API Key is valid!", color = Color.Green)
+            Text("API 金鑰有效！", color = Color.Green)
         }
         is ValidationState.Failure -> {
             Text(validationState.message, color = Color.Red)
@@ -456,11 +383,10 @@ private fun SaveButton(
     Button(
         onClick = onClick,
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 16.dp),
+            .fillMaxWidth(),
         enabled = validationState is ValidationState.Success
     ) {
-        Text("Save")
+        Text("儲存")
     }
 }
 
@@ -471,6 +397,21 @@ private fun BottomNavigationBar(
     onNavigateToApiKey: () -> Unit,
     onNavigateToCamera: () -> Unit
 ) {
+    val navigationItems = listOf(
+        NavigationItemData(
+            icon = Icons.Default.Key,
+            text = "API Key",
+            isSelected = selectedScreen == "API Key",
+            onClick = onNavigateToApiKey
+        ),
+        NavigationItemData(
+            icon = Icons.Default.PhotoCamera,
+            text = "Camera",
+            isSelected = selectedScreen == "Camera",
+            onClick = onNavigateToCamera
+        )
+    )
+    
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -480,52 +421,182 @@ private fun BottomNavigationBar(
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        val isCameraSelected = selectedScreen == "Camera"
-        val isApiKeySelected = selectedScreen == "API Key"
-
-        // API Key item
-        NavigationItem(
-            icon = Icons.Default.Key,
-            text = "API Key",
-            isSelected = isApiKeySelected,
-            onClick = onNavigateToApiKey
-        )
-
-        // Camera item
-        NavigationItem(
-            icon = Icons.Default.PhotoCamera,
-            text = "Camera",
-            isSelected = isCameraSelected,
-            onClick = onNavigateToCamera
-        )
+        navigationItems.forEach { item ->
+            NavigationItem(item)
+        }
     }
 }
 
+// 導航項目數據類
+data class NavigationItemData(
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+    val text: String,
+    val isSelected: Boolean,
+    val onClick: () -> Unit
+)
+
 // 導航項目組件
 @Composable
-private fun NavigationItem(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    text: String,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
+private fun NavigationItem(item: NavigationItemData) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-            .clickable { onClick() }
+            .clickable { item.onClick() }
             .padding(8.dp)
     ) {
         Icon(
-            imageVector = icon,
-            contentDescription = text,
-            tint = if (isSelected) BlueAccent else GrayText,
+            imageVector = item.icon,
+            contentDescription = item.text,
+            tint = if (item.isSelected) BlueAccent else GrayText,
             modifier = Modifier.size(32.dp)
         )
         Text(
-            text = text,
-            color = if (isSelected) BlueAccent else GrayText,
+            text = item.text,
+            color = if (item.isSelected) BlueAccent else GrayText,
             fontSize = 14.sp,
             textAlign = TextAlign.Center
         )
     }
+}
+
+// 表單區域組件
+@Composable
+private fun FormSection(
+    apiKey: String,
+    passwordVisible: Boolean,
+    onPasswordVisibilityChange: () -> Unit,
+    onApiKeyChange: (String) -> Unit,
+    selectedModel: String,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    onModelChange: (String) -> Unit,
+    validationState: ValidationState,
+    onValidateClick: () -> Unit,
+    onShowGuide: () -> Unit,
+    onSaveClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column {
+            // API Key 輸入區域
+            ApiKeyInputSection(
+                apiKey = apiKey,
+                passwordVisible = passwordVisible,
+                onPasswordVisibilityChange = onPasswordVisibilityChange,
+                onApiKeyChange = onApiKeyChange
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 模型選擇區域
+            ModelSelectionSection(
+                selectedModel = selectedModel,
+                expanded = expanded,
+                onExpandedChange = onExpandedChange,
+                onModelChange = onModelChange
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 驗證按鈕和結果
+            ValidationSection(
+                validationState = validationState,
+                onClick = onValidateClick
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // API 金鑰說明
+            Text(
+                text = "您可以從以下網站取得您的 Gemini API 金鑰：",
+                color = GrayText,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+            )
+            
+            Spacer(modifier = Modifier.height(4.dp))
+            
+            // 可點擊的連結文字
+            val context = LocalContext.current
+            ClickableLinkText(
+                context = context
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // 如何申請 API Key 按鈕
+            HelpButton(
+                onClick = onShowGuide
+            )
+            
+            // 為驗證成功後的保存按鈕留出空間
+            Spacer(modifier = Modifier.weight(1f, fill = false))
+        }
+
+        // 保存按鈕
+        SaveButton(
+            validationState = validationState,
+            onClick = onSaveClick
+        )
+    }
+}
+
+// 可點擊連結組件
+@Composable
+private fun ClickableLinkText(context: android.content.Context = LocalContext.current) {
+    Text(
+        text = buildAnnotatedString {
+            withStyle(style = androidx.compose.ui.text.SpanStyle(color = BlueAccent)) {
+                append(ApiConfig.GOOGLE_AI_STUDIO_WEBSITE)
+            }
+        },
+        textAlign = TextAlign.Center,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+            .clickable {
+                val intent = Intent(Intent.ACTION_VIEW, ApiConfig.GOOGLE_AI_STUDIO_URL.toUri())
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(intent)
+            }
+    )
+}
+
+// 幫助按鈕組件
+@Composable
+private fun HelpButton(onClick: () -> Unit) {
+    Button(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.Help,
+                contentDescription = "Help",
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("如何申請 API Key？")
+        }
+    }
+}
+
+// 驗證區域組件
+@Composable
+private fun ValidationSection(
+    validationState: ValidationState,
+    onClick: () -> Unit
+) {
+    ValidateApiKeyButton(
+        validationState = validationState,
+        onClick = onClick
+    )
+    Spacer(modifier = Modifier.height(8.dp))
+    ValidationResultMessage(validationState = validationState)
 }
