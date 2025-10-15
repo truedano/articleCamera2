@@ -207,7 +207,8 @@ fun ApiKeyScreen(
             modifier = Modifier
                 .padding(innerPadding)
                 .padding(16.dp)
-                .fillMaxSize(),
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // 表單區域
@@ -476,10 +477,8 @@ private fun FormSection(
     onSaveClick: () -> Unit
 ) {
     Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.SpaceBetween
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Column {
             // API Key 輸入區域
             ApiKeyInputSection(
                 apiKey = apiKey,
@@ -533,15 +532,13 @@ private fun FormSection(
                 onClick = onShowGuide
             )
             
-            // 為驗證成功後的保存按鈕留出空間
-            Spacer(modifier = Modifier.weight(1f, fill = false))
-        }
-
-        // 保存按鈕
-        SaveButton(
-            validationState = validationState,
-            onClick = onSaveClick
-        )
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            // 保存按鈕
+            SaveButton(
+                validationState = validationState,
+                onClick = onSaveClick
+            )
     }
 }
 
