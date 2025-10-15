@@ -71,6 +71,7 @@ fun CameraScreen(
     hasCameraPermission: Boolean = false,
     onNavigateToApiKey: () -> Unit,
     onNavigateToCamera: () -> Unit,
+    onNavigateToQuestionSettings: (String) -> Unit, // 更新導航到問題設定的回調，接收文章內容
     selectedScreen: String
 ) {
     var imageCapture by remember { mutableStateOf<ImageCapture?>(null) }
@@ -227,10 +228,18 @@ fun CameraScreen(
         Button(
             onClick = {
                 if (hasCameraPermission && isCameraReady && imageCapture != null) {
-                    CameraUtils.takePhoto(imageCapture!!, context) { result ->
-                        // The image has been processed by Gemini, and the result is available in 'result'
-                        // The result is already logged in the ImageToTextConverter
-                    }
+                    CameraUtils.takePhoto(
+                        imageCapture = imageCapture!!,
+                        context = context,
+                        onImageSaved = { result ->
+                            // The image has been processed by Gemini, and the result is available in 'result'
+                            // The result is already logged in the ImageToTextConverter
+                        },
+                        onArticleExtracted = { articleText ->
+                            // 當文章內容提取完成後，導向問題設定頁面
+                            onNavigateToQuestionSettings(articleText)
+                        }
+                    )
                 } else if (!hasCameraPermission) {
                     onNeedPermission()
                 } else {
@@ -253,6 +262,13 @@ fun CameraScreen(
             // No icon, pure solid circular button
         }
     }
+}
+
+// 移除多餘的函數
+
+// 新增一個函數來處理拍照後的流程
+fun navigateToQuestionSettings() {
+    // 這個函數將在拍照完成後被調用，導向問題設定頁面
 }
 
 @Composable

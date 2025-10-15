@@ -20,7 +20,8 @@ class CameraUtils {
         fun takePhoto(
             imageCapture: ImageCapture,
             context: Context,
-            onImageSaved: (String) -> Unit = {}
+            onImageSaved: (String) -> Unit = {},
+            onArticleExtracted: (String) -> Unit = {}
         ) {
             // Get the API key from ApiKeyManager
             val apiKeyManager = ApiKeyManager(context)
@@ -85,10 +86,13 @@ class CameraUtils {
                                             mainHandler.post {
                                                 // Call the callback with the result
                                                 onImageSaved(result)
+                                                // Also call the new callback for article extraction
+                                                onArticleExtracted(result)
                                             }
                                         } ?: run {
                                             // Fallback if mainLooper is null
                                             onImageSaved(result)
+                                            onArticleExtracted(result)
                                         }
                                     } catch (e: Exception) {
                                         e.printStackTrace()
