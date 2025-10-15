@@ -13,8 +13,7 @@ import kotlinx.coroutines.launch
 class ArticleQuestionViewModel(application: Application) : AndroidViewModel(application) {
     
     private val _articleText = MutableStateFlow("")
-    val articleText: StateFlow<String> = _articleText.asStateFlow()
-    
+
     private val _selectedGrade = MutableStateFlow(1)
     val selectedGrade: StateFlow<Int> = _selectedGrade.asStateFlow()
     

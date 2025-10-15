@@ -16,7 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.LinearProgressIndicator
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
@@ -104,12 +104,12 @@ fun QuestionScreen(
             // 進度條
             val progress = (currentQuestionIndex + 1).toFloat() / questionPaper!!.questions.size
             LinearProgressIndicator(
-                progress = progress,
+                progress = { progress },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(6.dp),
                 color = BlueAccent,
-                backgroundColor = LightGrayBorder
+                trackColor = LightGrayBorder
             )
             
             // 題號和進度
