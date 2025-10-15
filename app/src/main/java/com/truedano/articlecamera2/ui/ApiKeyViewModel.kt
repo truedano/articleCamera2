@@ -61,9 +61,6 @@ class ApiKeyViewModel(application: Application) : AndroidViewModel(application) 
         return apiKeyManager.getApiKey()
     }
 
-    fun getModel(): String {
-        return apiKeyManager.getModel()
-    }
 }
 
 sealed interface ValidationState {
