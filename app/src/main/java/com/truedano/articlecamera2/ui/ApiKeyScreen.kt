@@ -1,5 +1,6 @@
 package com.truedano.articlecamera2.ui
 
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -13,14 +14,19 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -30,9 +36,11 @@ import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -45,11 +53,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.truedano.articlecamera2.ui.theme.BlueAccent
 import com.truedano.articlecamera2.ui.theme.DarkCharcoalBackground
@@ -58,6 +70,96 @@ import com.truedano.articlecamera2.ui.theme.GrayText
 
 // 定義可用的 Gemini 模型列表
 private val GEMINI_MODELS = listOf("gemini-2.5-flash", "gemini-2.5-flash-lite")
+
+// API Key 申請指南組件
+@Composable
+fun ApiKeyGuideDialog(
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("如何申請 Gemini API Key") },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Text(
+                    text = "步驟 1: 訪問 Google AI Studio",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = BlueAccent
+                )
+                Text(
+                    text = "點擊下方連結前往 Google AI Studio 網站。",
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+                
+                Text(
+                    text = "步驟 2: 登入或註冊",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = BlueAccent,
+                    modifier = Modifier.padding(top = 16.dp)
+                )
+                Text(
+                    text = "使用您的 Google 帳戶登入，或註冊一個新帳戶。",
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+                
+                Text(
+                    text = "步驟 3: 啟用 Gemini API",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = BlueAccent,
+                    modifier = Modifier.padding(top = 16.dp)
+                )
+                Text(
+                    text = "在 AI Studio 中找到 API Keys 頁面，啟用 Gemini API。",
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+                
+                Text(
+                    text = "步驟 4: 建立 API Key",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = BlueAccent,
+                    modifier = Modifier.padding(top = 16.dp)
+                )
+                Text(
+                    text = "點擊「Create API Key」按鈕建立新的 API 金鑰。",
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+                
+                Text(
+                    text = "步驟 5: 複製並貼上",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = BlueAccent,
+                    modifier = Modifier.padding(top = 16.dp)
+                )
+                Text(
+                    text = "複製生成的 API 金鑰，並貼上到上方的輸入框中。",
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+                
+                Text(
+                    text = "注意事項:",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = BlueAccent,
+                    modifier = Modifier.padding(top = 16.dp)
+                )
+                Text(
+                    text = "• 請妥善保管您的 API 金鑰，不要分享給他人\n" +
+                           "• API 金鑰僅會顯示一次，請立即複製\n" +
+                           "• 申請 API 金鑰可能需要 Google Cloud 帳戶驗證",
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("關閉")
+            }
+        }
+    )
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,6 +176,9 @@ fun ApiKeyScreen(
     val validationState by apiKeyViewModel.validationState.collectAsState()
     var passwordVisible by remember { mutableStateOf(false) }
     var expanded by remember { mutableStateOf(false) }
+    var showApiKeyGuide by remember { mutableStateOf(false) }
+    
+    // 添加打開瀏覽器的函數
 
     Scaffold(
         topBar = {
@@ -137,14 +242,55 @@ fun ApiKeyScreen(
             ValidationResultMessage(validationState = validationState)
 
             Spacer(modifier = Modifier.height(8.dp))
-
+            
             // API 金鑰說明
             Text(
-                text = "You can obtain your Gemini API key from the Google AI Studio website.",
+                text = "You can obtain your Gemini API key from the",
                 color = GrayText,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
+            
+            Spacer(modifier = Modifier.height(4.dp))
+            
+            // 可點擊的連結文字
+            val context = LocalContext.current
+            androidx.compose.foundation.text.ClickableText(
+                text = androidx.compose.ui.text.buildAnnotatedString {
+                    withStyle(style = androidx.compose.ui.text.SpanStyle(color = BlueAccent)) {
+                        append("Google AI Studio website")
+                    }
+                },
+                style = androidx.compose.ui.text.TextStyle(
+                    textAlign = TextAlign.Center
+                ),
+                onClick = {
+                    val intent = Intent(Intent.ACTION_VIEW, "https://aistudio.google.com/app/apikey".toUri())
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    ContextCompat.startActivity(context, intent, null)
+                },
+                modifier = Modifier.padding(vertical = 4.dp)
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // 如何申請 API Key 按鈕
+            Button(
+                onClick = { showApiKeyGuide = true },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Help,
+                        contentDescription = "Help",
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("如何申請 API Key？")
+                }
+            }
             
             Spacer(modifier = Modifier.weight(1f))
 
@@ -156,6 +302,13 @@ fun ApiKeyScreen(
                     onSave()
                 }
             )
+            
+            // 顯示 API Key 指南對話框
+            if (showApiKeyGuide) {
+                ApiKeyGuideDialog(
+                    onDismiss = { showApiKeyGuide = false }
+                )
+            }
         }
     }
 }
