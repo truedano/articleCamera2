@@ -10,8 +10,9 @@ import java.io.FileInputStream
 
 class ImageToTextConverter(private val context: Context) {
 
-    companion object{
+    companion object {
         private const val TAG = "ImageToTextConverter"
+        private const val MAX_BITMAP_SIZE = 2048 // Maximum width/height for processing
     }
 
     /**
@@ -27,8 +28,8 @@ class ImageToTextConverter(private val context: Context) {
 
     private suspend fun convertImageToTextInternal(imagePath: String, apiKey: String): String {
         return try {
-            // Load the image from the file path
-            val bitmap = loadBitmapFromFile(imagePath)
+            // Load and optimize the image from the file path
+            val bitmap = loadAndOptimizeBitmapFromFile(imagePath)
             
             if (bitmap == null) {
                 Log.e(TAG, "Failed to load bitmap from path: $imagePath")
@@ -37,34 +38,41 @@ class ImageToTextConverter(private val context: Context) {
 
             // Get the model name from ApiKeyManager
             val apiKeyManager = ApiKeyManager(context)
-            val modelName = apiKeyManager.getModel()
+            val configuredModel = apiKeyManager.getModel()
+            
+            // Define a list of models to try in order of preference
+            val modelsToTry = listOf(configuredModel, "gemini-2.5-flash", "gemini-1.5-pro", "gemini-1.0-pro")
             
             var result: String? = null
             var lastException: Exception? = null
 
-            try {
-                // For models that support images (like gemini-1.5-flash and gemini-pro-vision)
-                val generativeModel = GenerativeModel(
-                    modelName = modelName,
-                    apiKey = apiKey
-                )
+            // Try each model in sequence until one succeeds
+            for (modelName in modelsToTry) {
+                try {
+                    // For models that support images (like gemini-1.5-flash and gemini-pro-vision)
+                    val generativeModel = GenerativeModel(
+                        modelName = modelName,
+                        apiKey = apiKey
+                    )
 
-                // Create content with image and text prompt
-                val inputContent = content {
-                    text("Describe the content of this image in detail.")
-                    image(bitmap)
+                    // Create content with image and text prompt
+                    val inputContent = content {
+                        text("Please extract and describe all text content from this image in detail. If there are articles, please format them clearly.")
+                        image(bitmap)
+                    }
+
+                    // Generate content from the image
+                    val response = generativeModel.generateContent(inputContent)
+                    result = response.text ?: "No text generated from the image"
+
+                    Log.d(TAG, "Successfully used model: $modelName")
+                    break // Exit the loop if successful
+
+                } catch (e: Exception) {
+                    Log.w(TAG, "Model $modelName failed: ${e.message}")
+                    lastException = e
+                    // Continue to the next model
                 }
-
-                // Generate content from the image
-                val response = generativeModel.generateContent(inputContent)
-                result = response.text ?: "No text generated from the image"
-
-                Log.d(TAG, "Successfully used model: $modelName")
-
-            } catch (e: Exception) {
-                Log.w(TAG, "Model $modelName failed: ${e.message}")
-                lastException = e
-                // Continue to the next model
             }
             
             if (result != null) {
@@ -85,16 +93,48 @@ class ImageToTextConverter(private val context: Context) {
     }
 
     /**
-     * Loads a bitmap from a file path.
+     * Loads a bitmap from a file path and optimizes it for API processing.
      */
-    private fun loadBitmapFromFile(filePath: String): Bitmap? {
+    private fun loadAndOptimizeBitmapFromFile(filePath: String): Bitmap? {
         return try {
+            // First decode bounds to check dimensions
+            val options = BitmapFactory.Options().apply {
+                inJustDecodeBounds = true
+            }
+            BitmapFactory.decodeFile(filePath, options)
+            
+            // Calculate sample size to reduce image size if needed
+            options.inSampleSize = calculateInSampleSize(options)
+            options.inJustDecodeBounds = false
+            
+            // Decode the actual bitmap with the calculated sample size
             FileInputStream(filePath).use { inputStream ->
-                BitmapFactory.decodeStream(inputStream)
+                BitmapFactory.decodeStream(inputStream, null, options)
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error loading bitmap from file: $filePath", e)
             null
         }
+    }
+
+    /**
+     * Calculates the sample size to reduce bitmap dimensions while maintaining aspect ratio.
+     */
+    private fun calculateInSampleSize(options: BitmapFactory.Options): Int {
+        val (height: Int, width: Int) = options.run { outHeight to outWidth }
+        var inSampleSize = 1
+
+        if (height > MAX_BITMAP_SIZE || width > MAX_BITMAP_SIZE) {
+            val halfHeight: Int = height / 2
+            val halfWidth: Int = width / 2
+
+            // Calculate the largest inSampleSize value that is a power of 2 and keeps both
+            // height and width larger than the requested height and width.
+            while (halfHeight / inSampleSize >= MAX_BITMAP_SIZE || halfWidth / inSampleSize >= MAX_BITMAP_SIZE) {
+                inSampleSize *= 2
+            }
+        }
+
+        return inSampleSize
     }
 }
