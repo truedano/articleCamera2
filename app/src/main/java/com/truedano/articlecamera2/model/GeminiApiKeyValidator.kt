@@ -3,21 +3,25 @@ package com.truedano.articlecamera2.model
 import com.google.ai.client.generativeai.GenerativeModel
 import kotlinx.coroutines.flow.first
 
-class GeminiApiKeyValidator {
+class GeminiApiKeyValidator(private val context: android.content.Context) {
     /**
      * Checks if the given Gemini API key is valid by making a network request.
      *
      * @param apiKey The API key to validate.
      * @return `true` if the key is valid, `false` otherwise.
      */
-    suspend fun isValid(apiKey: String): Boolean {
+    suspend fun isValid(apiKey: String, modelName: String? = null): Boolean {
         if (apiKey.isBlank()) {
             return false
         }
         return try {
+            val actualModelName = modelName ?: run {
+                val apiKeyManager = ApiKeyManager(context)
+                apiKeyManager.getModel()
+            }
             val generativeModel = GenerativeModel(
-                // Let's try the latest model to rule out model availability issues.
-                modelName = "gemini-2.5-flash-lite",
+                // Use the provided model or fallback to the one from settings to validate the API key
+                modelName = actualModelName,
                 apiKey = apiKey
             )
             // A lightweight streaming call to validate the key and model access.

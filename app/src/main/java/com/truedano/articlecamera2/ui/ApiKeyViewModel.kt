@@ -12,8 +12,8 @@ import kotlinx.coroutines.launch
 
 class ApiKeyViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val validator = GeminiApiKeyValidator()
     private val apiKeyManager = ApiKeyManager(application)
+    private val validator = GeminiApiKeyValidator(application)
 
     private val _apiKey = MutableStateFlow("")
     val apiKey: StateFlow<String> = _apiKey.asStateFlow()
@@ -43,7 +43,7 @@ class ApiKeyViewModel(application: Application) : AndroidViewModel(application) 
     fun validateApiKey() {
         viewModelScope.launch {
             _validationState.value = ValidationState.Loading
-            val isValid = validator.isValid(_apiKey.value)
+            val isValid = validator.isValid(_apiKey.value, _selectedModel.value)
             _validationState.value = if (isValid) {
                 ValidationState.Success
             } else {
