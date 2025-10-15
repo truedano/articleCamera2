@@ -22,9 +22,9 @@ class CameraUtils {
             context: Context,
             onImageSaved: (String) -> Unit = {}
         ) {
-            // Get the API key from SharedPreferences (as stored in MainActivity)
-            val sharedPref = context.getSharedPreferences("api_key_prefs", Context.MODE_PRIVATE)
-            val apiKey = sharedPref.getString("gemini_api_key", "") ?: ""
+            // Get the API key from ApiKeyManager
+            val apiKeyManager = ApiKeyManager(context)
+            val apiKey = apiKeyManager.getApiKey()
 
             if (apiKey.isEmpty()) {
                 Toast.makeText(context, "請先設定API金鑰", Toast.LENGTH_LONG).show()
