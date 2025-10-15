@@ -1,5 +1,6 @@
 package com.truedano.articlecamera2.ui
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -98,8 +100,10 @@ fun QuestionSettingsScreen(
 
             // 程度選擇按鈕
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 for (grade in 1..6) {
                     GradeButton(
@@ -195,8 +199,8 @@ fun GradeButton(
     Button(
         onClick = onClick,
         modifier = Modifier
-            .width(48.dp)
-            .height(48.dp),
+            .width(100.dp)
+            .height(60.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = if (isSelected) BlueAccent else DarkCharcoalBackground
         ),
@@ -204,7 +208,7 @@ fun GradeButton(
     ) {
         Text(
             text = "${grade}年級",
-            fontSize = 12.sp,
+            fontSize = 10.sp,
             color = if (isSelected) Color.White else GrayText,
             textAlign = TextAlign.Center
         )
