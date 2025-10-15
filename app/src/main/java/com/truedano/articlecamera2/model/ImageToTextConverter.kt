@@ -3,12 +3,12 @@ package com.truedano.articlecamera2.model
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.net.Uri
 import android.util.Log
 import com.google.ai.client.generativeai.GenerativeModel
 import com.google.ai.client.generativeai.type.content
-import java.io.FileInputStream
 
-class ImageToTextConverter(private val context: Context) {
+class ImageToTextConverter() {
 
     companion object {
         private const val TAG = "ImageToTextConverter"
@@ -16,23 +16,20 @@ class ImageToTextConverter(private val context: Context) {
     }
 
     /**
-     * Converts an image to text using the Gemini API.
+     * Converts an image from a URI to text using the Gemini API, without saving to device.
      *
-     * @param imagePath The path to the image file to convert.
+     * @param context The context to access the content resolver
+     * @param uri The URI of the image to convert
      * @param apiKey The API key to use for the Gemini API.
      * @return The text extracted from the image.
      */
-    suspend fun convertImageToText(imagePath: String, apiKey: String): String {
-        return convertImageToTextInternal(imagePath, apiKey)
-    }
-
-    private suspend fun convertImageToTextInternal(imagePath: String, apiKey: String): String {
+    suspend fun convertImageToTextDirectly(context: Context, uri: Uri, apiKey: String): String {
         return try {
-            // Load and optimize the image from the file path
-            val bitmap = loadAndOptimizeBitmapFromFile(imagePath)
+            // Load and optimize the image from the URI
+            val bitmap = loadAndOptimizeBitmapFromUri(context, uri)
             
             if (bitmap == null) {
-                Log.e(TAG, "Failed to load bitmap from path: $imagePath")
+                Log.e(TAG, "Failed to load bitmap from URI: $uri")
                 return "Error: Failed to load image"
             }
 
@@ -93,26 +90,28 @@ class ImageToTextConverter(private val context: Context) {
     }
 
     /**
-     * Loads a bitmap from a file path and optimizes it for API processing.
+     * Loads a bitmap from a URI and optimizes it for API processing.
      */
-    private fun loadAndOptimizeBitmapFromFile(filePath: String): Bitmap? {
+    private fun loadAndOptimizeBitmapFromUri(context: Context, uri: Uri): Bitmap? {
         return try {
             // First decode bounds to check dimensions
             val options = BitmapFactory.Options().apply {
                 inJustDecodeBounds = true
             }
-            BitmapFactory.decodeFile(filePath, options)
+            context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                BitmapFactory.decodeStream(inputStream, null, options)
+            }
             
             // Calculate sample size to reduce image size if needed
             options.inSampleSize = calculateInSampleSize(options)
             options.inJustDecodeBounds = false
             
             // Decode the actual bitmap with the calculated sample size
-            FileInputStream(filePath).use { inputStream ->
+            context.contentResolver.openInputStream(uri)?.use { inputStream ->
                 BitmapFactory.decodeStream(inputStream, null, options)
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error loading bitmap from file: $filePath", e)
+            Log.e(TAG, "Error loading bitmap from URI: $uri", e)
             null
         }
     }

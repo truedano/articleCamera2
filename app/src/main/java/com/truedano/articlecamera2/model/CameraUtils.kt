@@ -3,13 +3,10 @@ package com.truedano.articlecamera2.model
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.widget.Toast
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import kotlinx.coroutines.runBlocking
-import java.io.File
-import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -75,7 +72,7 @@ class CameraUtils {
                 contentValues
             ).build()
 
-            val imageToTextConverter = ImageToTextConverter(context)
+            val imageToTextConverter = ImageToTextConverter()
 
             // 設置照片捕獲的回調
             imageCapture.takePicture(
@@ -91,7 +88,7 @@ class CameraUtils {
                     override fun onImageSaved(output: ImageCapture.OutputFileResults) {
                         // For Android 10+, the URI should be provided and image is already saved to MediaStore
                         val savedUri = output.savedUri
-                        Toast.makeText(context, "照片已保存至相簿", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, "生成中請稍候...", Toast.LENGTH_LONG).show()
 
                         // Extract the file path from URI for ImageToTextConverter
                         savedUri?.let { uri ->
@@ -102,7 +99,8 @@ class CameraUtils {
                                         // Since convertImageToText is a suspend function, we need to call it differently
                                         // Create a coroutine scope to handle the suspend function
                                         val result = runBlocking {
-                                            imageToTextConverter.convertImageToText(getRealPathFromURI(context, uri), apiKey)
+                                            // Directly process the image from URI without saving to cache
+                                            imageToTextConverter.convertImageToTextDirectly(context, uri, apiKey)
                                         }
                                         // Post the result back to the main thread if needed for UI updates
                                         context.mainLooper?.let { looper ->
@@ -136,25 +134,5 @@ class CameraUtils {
             )
         }
 
-        // Helper function to get the real path from URI
-        fun getRealPathFromURI(context: Context, uri: Uri): String {
-            // For Android 10+, we need to copy the file to app's cache directory since MediaStore provides a content URI
-            // For Android 10+, copy to cache directory
-            val inputStream = context.contentResolver.openInputStream(uri)
-            val fileName = "temp_image_${System.currentTimeMillis()}.jpg"
-            val outputFile = File(context.cacheDir, fileName)
-
-            try {
-                inputStream?.use { input ->
-                    FileOutputStream(outputFile).use { output ->
-                        input.copyTo(output)
-                    }
-                }
-                return outputFile.absolutePath
-            } catch (e: Exception) {
-                e.printStackTrace()
-                throw e
-            }
-        }
     }
 }
