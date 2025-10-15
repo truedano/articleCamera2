@@ -54,13 +54,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.truedano.articlecamera2.ui.theme.BlueAccent
@@ -255,21 +255,20 @@ fun ApiKeyScreen(
             
             // 可點擊的連結文字
             val context = LocalContext.current
-            androidx.compose.foundation.text.ClickableText(
-                text = androidx.compose.ui.text.buildAnnotatedString {
+            Text(
+                text = buildAnnotatedString {
                     withStyle(style = androidx.compose.ui.text.SpanStyle(color = BlueAccent)) {
                         append("Google AI Studio website")
                     }
                 },
-                style = androidx.compose.ui.text.TextStyle(
-                    textAlign = TextAlign.Center
-                ),
-                onClick = {
-                    val intent = Intent(Intent.ACTION_VIEW, "https://aistudio.google.com/app/apikey".toUri())
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    ContextCompat.startActivity(context, intent, null)
-                },
-                modifier = Modifier.padding(vertical = 4.dp)
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .padding(vertical = 4.dp)
+                    .clickable {
+                        val intent = Intent(Intent.ACTION_VIEW, "https://aistudio.google.com/app/apikey".toUri())
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        context.startActivity(intent)
+                    }
             )
             
             Spacer(modifier = Modifier.height(8.dp))
