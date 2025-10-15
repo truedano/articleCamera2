@@ -288,8 +288,8 @@ private fun ValidationResultMessage(validationState: ValidationState) {
         ValidationState.Success -> {
             Text("API Key is valid!", color = Color.Green)
         }
-        ValidationState.Failure -> {
-            Text("API Key is invalid.", color = Color.Red)
+        is ValidationState.Failure -> {
+            Text(validationState.message, color = Color.Red)
         }
         else -> { /* No text to show */ }
     }
