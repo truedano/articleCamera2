@@ -24,12 +24,34 @@ class CameraUtils {
             onArticleExtracted: (String) -> Unit = {},
             onError: () -> Unit = {}
         ) {
-            // Get the API key from ApiKeyManager
+            // Get the API key and model from ApiKeyManager
             val apiKeyManager = ApiKeyManager(context)
             val apiKey = apiKeyManager.getApiKey()
+            val model = apiKeyManager.getModel()
 
             if (apiKey.isEmpty()) {
                 Toast.makeText(context, "請先設定API金鑰", Toast.LENGTH_LONG).show()
+                return
+            }
+            
+            if (model.isEmpty()) {
+                Toast.makeText(context, "請先設定模型", Toast.LENGTH_LONG).show()
+                return
+            }
+            
+            // 在新執行緒中驗證API Key的有效性
+            val isValid = try {
+                val validator = com.truedano.articlecamera2.model.GeminiApiKeyValidator(context)
+                // 使用 runBlocking 在同步上下文中執行 suspend 函數
+                kotlinx.coroutines.runBlocking {
+                    validator.isValid(apiKey, model)
+                }
+            } catch (e: Exception) {
+                false
+            }
+            
+            if (!isValid) {
+                Toast.makeText(context, "API金鑰或模型設定無效，請重新設定", Toast.LENGTH_LONG).show()
                 return
             }
 

@@ -252,6 +252,23 @@ fun CameraScreen(
                 Button(
                     onClick = {
                         if (hasCameraPermission && isCameraReady && imageCapture != null && !isProcessing) {
+                            // 檢查API Key和Model是否正確設定
+                            val apiKeyManager = com.truedano.articlecamera2.model.ApiKeyManager(context)
+                            val apiKey = apiKeyManager.getApiKey()
+                            val model = apiKeyManager.getModel()
+                            
+                            if (apiKey.isEmpty()) {
+                                Toast.makeText(context, "請先設定API金鑰", Toast.LENGTH_LONG).show()
+                                onNavigateToApiKey()
+                                return@Button
+                            }
+                            
+                            if (model.isEmpty()) {
+                                Toast.makeText(context, "請先設定模型", Toast.LENGTH_LONG).show()
+                                onNavigateToApiKey()
+                                return@Button
+                            }
+                            
                             isProcessing = true
                             CameraUtils.takePhoto(
                                 imageCapture = imageCapture!!,
