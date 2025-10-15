@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.LinearProgressIndicator
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
@@ -21,6 +20,8 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -117,12 +118,11 @@ fun GradeResultScreen(
                     // 進度條
                     val progress = gradeResult!!.correctCount.toFloat() / gradeResult!!.totalCount
                     LinearProgressIndicator(
-                        progress = progress,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(8.dp),
+                        progress = { progress },
+                        modifier = Modifier.fillMaxWidth().height(8.dp),
                         color = BlueAccent,
-                        backgroundColor = LightGrayBorder
+                        trackColor = LightGrayBorder,
+                        strokeCap = ProgressIndicatorDefaults.LinearStrokeCap,
                     )
                     
                     Spacer(modifier = Modifier.height(12.dp))
