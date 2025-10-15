@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -76,6 +77,7 @@ fun CameraScreen(
 ) {
     var imageCapture by remember { mutableStateOf<ImageCapture?>(null) }
     var isCameraReady by remember { mutableStateOf(false) }
+    var isProcessing by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     // Request permission if not granted
@@ -225,41 +227,70 @@ fun CameraScreen(
         }
         
         // 快 shutter button (overlay on the bottom navigation)
-        Button(
-            onClick = {
-                if (hasCameraPermission && isCameraReady && imageCapture != null) {
-                    CameraUtils.takePhoto(
-                        imageCapture = imageCapture!!,
-                        context = context,
-                        onImageSaved = { result ->
-                            // The image has been processed by Gemini, and the result is available in 'result'
-                            // The result is already logged in the ImageToTextConverter
-                        },
-                        onArticleExtracted = { articleText ->
-                            // 當文章內容提取完成後，導向問題設定頁面
-                            onNavigateToQuestionSettings(articleText)
-                        }
-                    )
-                } else if (!hasCameraPermission) {
-                    onNeedPermission()
-                } else {
-                    Toast.makeText(context, "相機尚未準備完成，請稍後再試", Toast.LENGTH_SHORT).show()
-                }
-            },
+        Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .offset(y = (-50).dp)
                 .size(72.dp)
-                .border(3.dp, LightGrayBorder, CircleShape)
                 .zIndex(1f)
-                .semantics { contentDescription = "拍照按鈕" },
-            shape = CircleShape,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = BlueAccent
-            ),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
         ) {
-            // No icon, pure solid circular button
+            if (isProcessing) {
+                // 顯示處理中的進度指示器
+                Box(
+                    modifier = Modifier
+                        .size(72.dp)
+                        .background(Color(0x80000000), CircleShape), // 半透明黑色背景
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(
+                        color = Color.White,
+                        strokeWidth = 3.dp,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+            } else {
+                Button(
+                    onClick = {
+                        if (hasCameraPermission && isCameraReady && imageCapture != null && !isProcessing) {
+                            isProcessing = true
+                            CameraUtils.takePhoto(
+                                imageCapture = imageCapture!!,
+                                context = context,
+                                onImageSaved = { result ->
+                                    // The image has been processed by Gemini, and the result is available in 'result'
+                                    // The result is already logged in the ImageToTextConverter
+                                },
+                                onArticleExtracted = { articleText ->
+                                    // 當文章內容提取完成後，導向問題設定頁面
+                                    isProcessing = false
+                                    onNavigateToQuestionSettings(articleText)
+                                },
+                                onError = {
+                                    // 如果發生錯誤，也要將處理狀態設為false
+                                    isProcessing = false
+                                }
+                            )
+                        } else if (!hasCameraPermission) {
+                            onNeedPermission()
+                        } else if (isProcessing) {
+                            Toast.makeText(context, "正在處理圖片中，請稍候...", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(context, "相機尚未準備完成，請稍後再試", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .border(3.dp, LightGrayBorder, CircleShape)
+                        .semantics { contentDescription = "拍照按鈕" },
+                    shape = CircleShape,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = BlueAccent
+                    ),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
+                ) {
+                    // No icon, pure solid circular button
+                }
+            }
         }
     }
 }

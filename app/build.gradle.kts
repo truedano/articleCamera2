@@ -61,7 +61,8 @@ dependencies {
     implementation(libs.androidx.camera.view)
 
     implementation(libs.generativeai)
-    
+    implementation(libs.androidx.material3)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

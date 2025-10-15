@@ -21,7 +21,8 @@ class CameraUtils {
             imageCapture: ImageCapture,
             context: Context,
             onImageSaved: (String) -> Unit = {},
-            onArticleExtracted: (String) -> Unit = {}
+            onArticleExtracted: (String) -> Unit = {},
+            onError: () -> Unit = {}
         ) {
             // Get the API key from ApiKeyManager
             val apiKeyManager = ApiKeyManager(context)
@@ -62,6 +63,7 @@ class CameraUtils {
                     override fun onError(exception: ImageCaptureException) {
                         exception.printStackTrace()
                         Toast.makeText(context, "拍照失敗: ${exception.message}", Toast.LENGTH_LONG).show()
+                        onError()
                     }
 
                     override fun onImageSaved(output: ImageCapture.OutputFileResults) {
@@ -100,6 +102,7 @@ class CameraUtils {
                                             val mainHandler = android.os.Handler(looper)
                                             mainHandler.post {
                                                 Toast.makeText(context, "AI處理失敗: ${e.message}", Toast.LENGTH_LONG).show()
+                                                onError()
                                             }
                                         }
                                     }
