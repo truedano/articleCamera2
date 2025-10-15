@@ -41,12 +41,12 @@ class CameraUtils {
             
             // 在新執行緒中驗證API Key的有效性
             val isValid = try {
-                val validator = com.truedano.articlecamera2.model.GeminiApiKeyValidator(context)
+                val validator = GeminiApiKeyValidator(context)
                 // 使用 runBlocking 在同步上下文中執行 suspend 函數
-                kotlinx.coroutines.runBlocking {
+                runBlocking {
                     validator.isValid(apiKey, model)
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 false
             }
             
