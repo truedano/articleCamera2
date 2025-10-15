@@ -7,19 +7,25 @@ class ApiKeyManager(context: Context) {
     
     private val sharedPreferences = context.getSharedPreferences("api_key_prefs", Context.MODE_PRIVATE)
     
+    companion object {
+        private const val GEMINI_API_KEY = "gemini_api_key"
+        private const val GEMINI_MODEL = "gemini_model"
+        private const val DEFAULT_MODEL = "gemini-2.5-flash"
+    }
+    
     fun saveApiKey(apiKey: String) {
-        sharedPreferences.edit { putString("gemini_api_key", apiKey) }
+        sharedPreferences.edit { putString(GEMINI_API_KEY, apiKey) }
     }
     
     fun getApiKey(): String {
-        return sharedPreferences.getString("gemini_api_key", "") ?: ""
+        return sharedPreferences.getString(GEMINI_API_KEY, "") ?: ""
     }
     
     fun saveModel(model: String) {
-        sharedPreferences.edit { putString("gemini_model", model) }
+        sharedPreferences.edit { putString(GEMINI_MODEL, model) }
     }
     
     fun getModel(): String {
-        return sharedPreferences.getString("gemini_model", "gemini-2.5-flash") ?: "gemini-2.5-flash"
+        return sharedPreferences.getString(GEMINI_MODEL, DEFAULT_MODEL) ?: DEFAULT_MODEL
     }
 }
