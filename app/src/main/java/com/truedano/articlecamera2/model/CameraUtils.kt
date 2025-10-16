@@ -88,7 +88,6 @@ class CameraUtils {
                     override fun onImageSaved(output: ImageCapture.OutputFileResults) {
                         // For Android 10+, the URI should be provided and image is already saved to MediaStore
                         val savedUri = output.savedUri
-                        Toast.makeText(context, "生成中請稍候...", Toast.LENGTH_LONG).show()
 
                         // Extract the file path from URI for ImageToTextConverter
                         savedUri?.let { uri ->

@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.PhotoCamera
@@ -47,7 +48,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -56,6 +57,7 @@ import androidx.compose.ui.zIndex
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.truedano.articlecamera2.model.CameraUtils
 import com.truedano.articlecamera2.model.VersionUtils
 import com.truedano.articlecamera2.ui.theme.BlueAccent
@@ -79,6 +81,7 @@ fun CameraScreen(
     var imageCapture by remember { mutableStateOf<ImageCapture?>(null) }
     var isCameraReady by remember { mutableStateOf(false) }
     var isProcessing by remember { mutableStateOf(false) }
+    var showProcessingDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     // Request permission if not granted
@@ -171,6 +174,7 @@ fun CameraScreen(
                 .height(130.dp)
                 .background(DarkCharcoalBackground)
                 .windowInsetsPadding(WindowInsets.navigationBars)
+                .zIndex(5f) // 設定較低的zIndex，確保dialog在上層
         ) {
             Row(
                 modifier = Modifier
@@ -228,6 +232,51 @@ fun CameraScreen(
                 }
             }
         }
+
+        // 顯示執行中dialog (全螢幕遮罩)
+        if (showProcessingDialog) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0x80000000)) // 半透明黑色背景
+                    .zIndex(10f), // 確保在最上層
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier
+                        .padding(24.dp)
+                        .background(DarkCharcoalBackground, RoundedCornerShape(12.dp))
+                        .padding(24.dp)
+                ) {
+                    // 顯示進度指示器
+                    CircularProgressIndicator(
+                        color = BlueAccent,
+                        strokeWidth = 4.dp,
+                        modifier = Modifier.size(48.dp)
+                    )
+                    
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = "處理中，請稍候...",
+                            color = Color.White,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        
+                        Text(
+                            text = "正在分析圖片並提取文章內容",
+                            color = GrayText,
+                            fontSize = 14.sp
+                        )
+                    }
+                }
+            }
+        }
         
         // 快 shutter button (overlay on the bottom navigation)
         Box(
@@ -235,7 +284,7 @@ fun CameraScreen(
                 .align(Alignment.BottomCenter)
                 .offset(y = (-50).dp)
                 .size(72.dp)
-                .zIndex(1f)
+                .zIndex(6f) // 設定較低的zIndex，但仍高於底部導航欄，但低於dialog
         ) {
             if (isProcessing) {
                 // 顯示處理中的進度指示器
@@ -273,6 +322,7 @@ fun CameraScreen(
                             }
                             
                             isProcessing = true
+                            showProcessingDialog = true
                             CameraUtils.takePhoto(
                                 imageCapture = imageCapture!!,
                                 context = context,
@@ -283,11 +333,13 @@ fun CameraScreen(
                                 onArticleExtracted = { articleText ->
                                     // 當文章內容提取完成後，導向問題設定頁面
                                     isProcessing = false
+                                    showProcessingDialog = false
                                     onNavigateToQuestionSettings(articleText)
                                 },
                                 onError = {
                                     // 如果發生錯誤，也要將處理狀態設為false
                                     isProcessing = false
+                                    showProcessingDialog = false
                                 }
                             )
                         } else if (!hasCameraPermission) {
