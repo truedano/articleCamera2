@@ -2,6 +2,8 @@ package com.truedano.articlecamera2.ui
 
 import android.util.Log
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.Preview
@@ -10,6 +12,7 @@ import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,9 +32,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.PhotoCamera
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -82,11 +85,66 @@ fun CameraScreen(
     var isCameraReady by remember { mutableStateOf(false) }
     var isProcessing by remember { mutableStateOf(false) }
     var showProcessingDialog by remember { mutableStateOf(false) }
+    var showCameraMenu by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     // Request permission if not granted
     if (!hasCameraPermission) {
         onNeedPermission()
+    }
+    
+    // Launcher for selecting image from gallery
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let { selectedUri ->
+            // Process the selected image with AI
+            val apiKeyManager = com.truedano.articlecamera2.model.ApiKeyManager(context)
+            val apiKey = apiKeyManager.getApiKey()
+            
+            if (apiKey.isEmpty()) {
+                Toast.makeText(context, "請先設定API金鑰", Toast.LENGTH_LONG).show()
+                onNavigateToApiKey()
+                return@let
+            }
+            
+            // Process the selected image using ImageToTextConverter
+            isProcessing = true
+            showProcessingDialog = true
+            
+            Thread {
+                try {
+                    val imageToTextConverter = com.truedano.articlecamera2.model.ImageToTextConverter()
+                    val result = kotlinx.coroutines.runBlocking {
+                        imageToTextConverter.convertImageToTextDirectly(context, selectedUri, apiKey)
+                    }
+                    
+                    // Switch back to main thread for UI updates
+                    context.mainLooper?.let { looper ->
+                        val mainHandler = android.os.Handler(looper)
+                        mainHandler.post {
+                            isProcessing = false
+                            showProcessingDialog = false
+                            onNavigateToQuestionSettings(result)
+                        }
+                    } ?: run {
+                        isProcessing = false
+                        showProcessingDialog = false
+                        onNavigateToQuestionSettings(result)
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    context.mainLooper?.let { looper ->
+                        val mainHandler = android.os.Handler(looper)
+                        mainHandler.post {
+                            isProcessing = false
+                            showProcessingDialog = false
+                            Toast.makeText(context, "處理圖片失敗: ${e.message}", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
+            }.start()
+        }
     }
 
     Box(
@@ -325,66 +383,78 @@ fun CameraScreen(
                     )
                 }
             } else {
-                Button(
-                    onClick = {
-                        if (hasCameraPermission && isCameraReady && imageCapture != null && !isProcessing) {
-                            // 檢查API Key和Model是否正確設定
-                            val apiKeyManager = com.truedano.articlecamera2.model.ApiKeyManager(context)
-                            val apiKey = apiKeyManager.getApiKey()
-                            val model = apiKeyManager.getModel()
-                            
-                            if (apiKey.isEmpty()) {
-                                Toast.makeText(context, "請先設定API金鑰", Toast.LENGTH_LONG).show()
-                                onNavigateToApiKey()
-                                return@Button
-                            }
-                            
-                            if (model.isEmpty()) {
-                                Toast.makeText(context, "請先設定模型", Toast.LENGTH_LONG).show()
-                                onNavigateToApiKey()
-                                return@Button
-                            }
-                            
-                            isProcessing = true
-                            showProcessingDialog = true
-                            CameraUtils.takePhoto(
-                                imageCapture = imageCapture!!,
-                                context = context,
-                                onImageSaved = { result ->
-                                    // The image has been processed by Gemini, and the result is available in 'result'
-                                    // The result is already logged in the ImageToTextConverter
-                                },
-                                onArticleExtracted = { articleText ->
-                                    // 當文章內容提取完成後，導向問題設定頁面
-                                    isProcessing = false
-                                    showProcessingDialog = false
-                                    onNavigateToQuestionSettings(articleText)
-                                },
-                                onError = {
-                                    // 如果發生錯誤，也要將處理狀態設為false
-                                    isProcessing = false
-                                    showProcessingDialog = false
-                                }
-                            )
-                        } else if (!hasCameraPermission) {
-                            onNeedPermission()
-                        } else if (isProcessing) {
-                            Toast.makeText(context, "正在處理圖片中，請稍候...", Toast.LENGTH_SHORT).show()
-                        } else {
-                            Toast.makeText(context, "相機尚未準備完成，請稍後再試", Toast.LENGTH_SHORT).show()
-                        }
-                    },
+                Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .border(3.dp, LightGrayBorder, CircleShape)
-                        .semantics { contentDescription = "拍照按鈕" },
-                    shape = CircleShape,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = BlueAccent
-                    ),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
+                        .background(BlueAccent, CircleShape)
+                        .combinedClickable(
+                            onClick = {
+                                if (hasCameraPermission && isCameraReady && imageCapture != null && !isProcessing) {
+                                    // 檢查API Key和Model是否正確設定
+                                    val apiKeyManager = com.truedano.articlecamera2.model.ApiKeyManager(context)
+                                    val apiKey = apiKeyManager.getApiKey()
+                                    val model = apiKeyManager.getModel()
+                                    
+                                    if (apiKey.isEmpty()) {
+                                        Toast.makeText(context, "請先設定API金鑰", Toast.LENGTH_LONG).show()
+                                        onNavigateToApiKey()
+                                    } else if (model.isEmpty()) {
+                                        Toast.makeText(context, "請先設定模型", Toast.LENGTH_LONG).show()
+                                        onNavigateToApiKey()
+                                    } else {
+                                        isProcessing = true
+                                        showProcessingDialog = true
+                                        CameraUtils.takePhoto(
+                                            imageCapture = imageCapture!!,
+                                            context = context,
+                                            onImageSaved = { result ->
+                                                // The image has been processed by Gemini, and the result is available in 'result'
+                                                // The result is already logged in the ImageToTextConverter
+                                            },
+                                            onArticleExtracted = { articleText ->
+                                                // 當文章內容提取完成後，導向問題設定頁面
+                                                isProcessing = false
+                                                showProcessingDialog = false
+                                                onNavigateToQuestionSettings(articleText)
+                                            },
+                                            onError = {
+                                                // 如果發生錯誤，也要將處理狀態設為false
+                                                isProcessing = false
+                                                showProcessingDialog = false
+                                            }
+                                        )
+                                    }
+                                } else if (!hasCameraPermission) {
+                                    onNeedPermission()
+                                } else if (isProcessing) {
+                                    Toast.makeText(context, "正在處理圖片中，請稍候...", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    Toast.makeText(context, "相機尚未準備完成，請稍後再試", Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            onLongClick = {
+                                showCameraMenu = true
+                            }
+                        )
+                        .semantics { contentDescription = "拍照按鈕" }
+                )
+                
+                // 拍照功能選單
+                DropdownMenu(
+                    expanded = showCameraMenu,
+                    onDismissRequest = { showCameraMenu = false },
+                    modifier = Modifier
+                        .background(DarkCharcoalBackground)
                 ) {
-                    // No icon, pure solid circular button
+                    DropdownMenuItem(
+                        text = { Text("單選圖片", color = Color.White) },
+                        onClick = {
+                            showCameraMenu = false
+                            // Launch the image picker
+                            imagePickerLauncher.launch("image/*")
+                        }
+                    )
                 }
             }
         }
