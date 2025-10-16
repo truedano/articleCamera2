@@ -19,6 +19,7 @@ Article Camera 2 是一個 Android 應用程式，可以透過相機拍攝文章
 - **相機**：CameraX（現代化 Android 相機庫）
 - **AI 服務**：Google Generative AI SDK（使用 Gemini 模型）
 - **架構模式**：MVVM（Model-View-ViewModel）
+- **版本**：0.0.2
 
 ## 安裝需求
 
@@ -59,18 +60,24 @@ Article Camera 2 是一個 Android 應用程式，可以透過相機拍攝文章
 app/
 ├── src/main/java/com/truedano/articlecamera2/
 │   ├── model/                 # 資料模型和業務邏輯
+│   │   ├── ApiConfig.kt       # API 配置
 │   │   ├── ApiKeyManager.kt   # API 金鑰管理
 │   │   ├── CameraUtils.kt     # 相機操作工具
 │   │   ├── GeminiApiKeyValidator.kt # API 金鑰驗證
 │   │   ├── ImageToTextConverter.kt # 圖片轉文字功能
 │   │   ├── QuestionData.kt    # 問題資料結構
-│   │   └── QuestionGenerator.kt # 問題生成邏輯
+│   │   ├── QuestionGenerator.kt # 問題生成邏輯
+│   │   └── VersionUtils.kt    # 版本資訊工具
 │   ├── ui/                    # 使用者介面組件
 │   │   ├── ApiKeyScreen.kt    # API 金鑰設定頁面
+│   │   ├── ApiKeyViewModel.kt # API 金鑰檢視模型
+│   │   ├── ArticleQuestionViewModel.kt # 文章問題檢視模型
 │   │   ├── CameraScreen.kt    # 相機拍攝頁面
-│   │   ├── QuestionSettingsScreen.kt # 問題設定頁面
-│   │   ├── QuestionScreen.kt  # 答題頁面
 │   │   ├── GradeResultScreen.kt # 成績結果頁面
+│   │   ├── QuestionGenerationScreen.kt # 問題生成頁面
+│   │   ├── QuestionScreen.kt  # 答題頁面
+│   │   ├── QuestionSettingsScreen.kt # 問題設定頁面
+│   │   ├── QuestionViewModel.kt # 問題檢視模型
 │   │   └── theme/             # 應用程式主題
 │   └── MainActivity.kt        # 主活動入口點
 ```
@@ -78,9 +85,20 @@ app/
 ## 依賴套件
 
 - `androidx.activity:activity-compose` - Compose 支援
-- `androidx.camera:camera-*` - CameraX 相機庫
+- `androidx.camera:camera-camera2` - CameraX 相機庫
+- `androidx.camera:camera-lifecycle` - CameraX 生命週期支援
+- `androidx.camera:camera-view` - CameraX 視圖支援
 - `com.google.ai.client.generativeai:generativeai` - Google Generative AI SDK
 - `androidx.compose.*` - Jetpack Compose UI 框架
+- `androidx.lifecycle:*` - Android Lifecycle 組件
+- `androidx.material3` - Material Design 3 支援
+
+## 權限說明
+
+應用程式需要以下權限：
+- `INTERNET` - 用於 AI 服務連線
+- `CAMERA` - 用於拍照功能
+- `WRITE_EXTERNAL_STORAGE` - 用於儲存拍攝的圖片 (API 等級 28 以下)
 
 ## 貢獻
 
