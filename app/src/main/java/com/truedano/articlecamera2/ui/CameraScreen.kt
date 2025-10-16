@@ -57,6 +57,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.truedano.articlecamera2.model.CameraUtils
+import com.truedano.articlecamera2.model.VersionUtils
 import com.truedano.articlecamera2.ui.theme.BlueAccent
 import com.truedano.articlecamera2.ui.theme.DarkCharcoalBackground
 import com.truedano.articlecamera2.ui.theme.DarkGrayBackground
@@ -103,8 +104,10 @@ fun CameraScreen(
                         modifier = Modifier.fillMaxWidth(),
                         contentAlignment = Alignment.Center
                     ) {
+                        val context = LocalContext.current
+                        val versionName = VersionUtils.getVersionWithPrefix(context)
                         Text(
-                            text = "Article Camera",
+                            text = "Article Camera $versionName",
                             color = Color.White,
                             textAlign = TextAlign.Center
                         )
