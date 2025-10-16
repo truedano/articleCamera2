@@ -278,6 +278,30 @@ fun CameraScreen(
             }
         }
         
+        // 長按提示文本
+        var showLongPressHint by remember { mutableStateOf(true) }
+        
+        // 顯示 "長按有更多功能" 文本，5秒後自動消失
+        if (showLongPressHint) {
+            Text(
+                text = "長按有更多功能",
+                color = Color.White,
+                fontSize = 16.sp, // 增大字體
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .offset(y = (-150).dp) // 調整位置在拍照按鈕上方更遠一些
+                    .zIndex(7f)
+            )
+            
+            // 使用副作用在5秒後隱藏提示
+            androidx.compose.runtime.LaunchedEffect(Unit) {
+                kotlinx.coroutines.delay(5000) // 5秒
+                showLongPressHint = false
+            }
+        }
+        
         // 快 shutter button (overlay on the bottom navigation)
         Box(
             modifier = Modifier
