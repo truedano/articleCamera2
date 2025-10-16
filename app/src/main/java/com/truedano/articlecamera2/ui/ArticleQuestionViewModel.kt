@@ -41,8 +41,9 @@ class ArticleQuestionViewModel(application: Application) : AndroidViewModel(appl
         _selectedQuestionCount.value = count
     }
     
-    fun generateQuestions(apiKey: String) {
-        if (_articleText.value.isEmpty()) {
+    fun generateQuestions(apiKey: String, articleText: String? = null) {
+        val textToUse = articleText ?: _articleText.value
+        if (textToUse.isEmpty()) {
             _error.value = "文章內容為空"
             return
         }
@@ -54,7 +55,7 @@ class ArticleQuestionViewModel(application: Application) : AndroidViewModel(appl
             try {
                 val questionGenerator = QuestionGenerator(getApplication())
                 val questionPaper = questionGenerator.generateQuestions(
-                    articleText = _articleText.value,
+                    articleText = textToUse,
                     grade = _selectedGrade.value,
                     questionCount = _selectedQuestionCount.value,
                     apiKey = apiKey
@@ -71,6 +72,10 @@ class ArticleQuestionViewModel(application: Application) : AndroidViewModel(appl
                 _isGenerating.value = false
             }
         }
+    }
+
+    fun resetQuestionPaper() {
+        _questionPaper.value = null
     }
 
 }

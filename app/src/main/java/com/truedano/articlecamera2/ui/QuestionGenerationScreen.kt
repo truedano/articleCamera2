@@ -52,6 +52,8 @@ fun QuestionGenerationScreen(
     // 當問題生成完成時，將其設置到QuestionViewModel並導航
     LaunchedEffect(questionPaper) {
         if (questionPaper != null) {
+            // 重置QuestionViewModel以確保使用新的問題卷
+            questionViewModel.reset()
             questionViewModel.setQuestionPaper(questionPaper!!)
             onQuestionsGenerated()
         }

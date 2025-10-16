@@ -97,6 +97,15 @@ class QuestionViewModel(application: Application) : AndroidViewModel(application
             question.correctAnswer == answer
         }
     }
+
+    fun reset() {
+        _questionPaper.value = null
+        _currentQuestionIndex.value = 0
+        _userAnswers.value = emptyList()
+        _isAnswering.value = false
+        _isGrading.value = false
+        _gradeResult.value = null
+    }
     
     private fun createGradeDetails(questions: List<Question>, answers: List<String>): List<QuestionGradeDetail> {
         return questions.zip(answers).map { (question, answer) ->

@@ -60,6 +60,8 @@ fun QuestionSettingsScreen(
     // 初始化文章內容
     LaunchedEffect(articleText) {
         articleQuestionViewModel.setArticleText(articleText)
+        // 確保問題卷被重置，避免保留之前的結果
+        articleQuestionViewModel.resetQuestionPaper()
     }
 
     Scaffold(
