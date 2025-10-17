@@ -41,6 +41,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -49,6 +50,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -90,6 +92,7 @@ fun CameraScreen(
     var isContinuousMode by remember { mutableStateOf(false) }
     var continuousPhotoCount by remember { mutableIntStateOf(0) }
     var capturedImageUris by remember { mutableStateOf<List<android.net.Uri>>(emptyList()) }
+    var lastCapturedImageUri by remember { mutableStateOf<android.net.Uri?>(null) } // 添加状态变量存储最近拍摄图片的URI
     val context = LocalContext.current
 
     // Request permission if not granted
@@ -188,21 +191,26 @@ fun CameraScreen(
             
             // 相機預覽區域
             if (hasCameraPermission) {
-                CameraPreview(
+                Box(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth()
-                        .background(DarkGrayBackground),
-                    onImageCaptureReady = { capture ->
-                        imageCapture = capture
-                        isCameraReady = true
-                    },
-                    onError = { error ->
-                        // Handle camera error
-                        isCameraReady = false
-                        Toast.makeText(context, error, Toast.LENGTH_LONG).show()
-                    }
-                )
+                        .background(DarkGrayBackground)
+                ) {
+                    CameraPreview(
+                        modifier = Modifier
+                            .fillMaxSize(),
+                        onImageCaptureReady = { capture ->
+                            imageCapture = capture
+                            isCameraReady = true
+                        },
+                        onError = { error ->
+                            // Handle camera error
+                            isCameraReady = false
+                            Toast.makeText(context, error, Toast.LENGTH_LONG).show()
+                        }
+                    )
+                }
             } else {
                 // Show permission request message if permission not granted
                 Box(
@@ -227,6 +235,21 @@ fun CameraScreen(
                         )
                     }
                 }
+            }
+        }
+        
+        // 显示缩略图，确保在底部导航栏之上
+        lastCapturedImageUri?.let { capturedUri ->
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 16.dp, bottom = 160.dp) // 增加底部间距以避免与导航栏重叠
+                    .zIndex(8f) // 设置较高的zIndex确保在导航栏之上
+            ) {
+                ThumbnailDisplay(
+                    imageUri = capturedUri,
+                    modifier = Modifier
+                )
             }
         }
         
@@ -420,6 +443,8 @@ fun CameraScreen(
                                                 capturedImageUris = capturedImageUris + uri
                                                 // 更新照片計數
                                                 continuousPhotoCount++
+                                                // 更新最近拍攝的圖片URI以顯示縮圖
+                                                lastCapturedImageUri = uri
                                                 isProcessing = false
                                             },
                                             onError = {
@@ -567,31 +592,50 @@ fun CameraScreen(
                                                     onImageCaptured = { uri ->
                                                         // 儲存圖片 URI 用於後續處理
                                                         capturedImageUris = capturedImageUris + uri
+                                                        // 更新最近拍攝的圖片URI以顯示縮圖
+                                                        lastCapturedImageUri = uri
                                                     }
                                                 )
                                             } else {
                                                 // 一般拍照模式
-                                                isProcessing = true
-                                                showProcessingDialog = true
-                                                CameraUtils.takePhoto(
-                                                    imageCapture = imageCapture!!,
-                                                    context = context,
-                                                    onImageSaved = { result ->
-                                                        // The image has been processed by Gemini, and the result is available in 'result'
-                                                        // The result is already logged in the ImageToTextConverter
-                                                    },
-                                                    onArticleExtracted = { articleText ->
-                                                        // 當文章內容提取完成後，導向問題設定頁面
-                                                        isProcessing = false
-                                                        showProcessingDialog = false
-                                                        onNavigateToQuestionSettings(articleText)
-                                                    },
-                                                    onError = {
-                                                        // 如果發生錯誤，也要將處理狀態設為false
-                                                        isProcessing = false
-                                                        showProcessingDialog = false
-                                                    }
-                                                )
+                                                // 檢查API Key和Model是否正確設定
+                                                val apiKeyManager = com.truedano.articlecamera2.model.ApiKeyManager(context)
+                                                val apiKey = apiKeyManager.getApiKey()
+                                                val model = apiKeyManager.getModel()
+                                                
+                                                if (apiKey.isEmpty()) {
+                                                    Toast.makeText(context, "請先設定API金鑰", Toast.LENGTH_LONG).show()
+                                                    onNavigateToApiKey()
+                                                } else if (model.isEmpty()) {
+                                                    Toast.makeText(context, "請先設定模型", Toast.LENGTH_LONG).show()
+                                                    onNavigateToApiKey()
+                                                } else {
+                                                    isProcessing = true
+                                                    showProcessingDialog = true
+                                                    CameraUtils.takePhoto(
+                                                        imageCapture = imageCapture!!,
+                                                        context = context,
+                                                        onImageSaved = { result ->
+                                                            // The image has been processed by Gemini, and the result is available in 'result'
+                                                            // The result is already logged in the ImageToTextConverter
+                                                        },
+                                                        onArticleExtracted = { articleText ->
+                                                            // 當文章內容提取完成後，導向問題設定頁面
+                                                            isProcessing = false
+                                                            showProcessingDialog = false
+                                                            onNavigateToQuestionSettings(articleText)
+                                                        },
+                                                        onError = {
+                                                            // 如果發生錯誤，也要將處理狀態設為false
+                                                            isProcessing = false
+                                                            showProcessingDialog = false
+                                                        },
+                                                        onImageCaptured = { uri ->
+                                                            // 更新最近拍攝的圖片URI以顯示縮圖
+                                                            lastCapturedImageUri = uri
+                                                        }
+                                                    )
+                                                }
                                             }
                                         }
                                     } else if (!hasCameraPermission) {
@@ -642,6 +686,91 @@ fun CameraScreen(
 }
 
 // 移除多餘的函數
+
+/**
+ * 顯示圖片縮圖的 Composable
+ */
+@Composable
+fun ThumbnailDisplay(
+    imageUri: android.net.Uri,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    var bitmap by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
+    
+    // 使用 LaunchedEffect 來載入圖片，使用 imageUri 作為 key
+    LaunchedEffect(imageUri) {
+        bitmap = null // 重置圖片
+        if (imageUri != android.net.Uri.EMPTY) {
+            // 在IO线程中加载图像
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                try {
+                    val inputStream = context.contentResolver.openInputStream(imageUri)
+                    if (inputStream != null) {
+                        // 使用inSampleSize创建缩略图以提高性能
+                        val options = android.graphics.BitmapFactory.Options().apply {
+                            inJustDecodeBounds = true
+                            // 先获取图片尺寸
+                            android.graphics.BitmapFactory.decodeStream(inputStream, null, this)
+                            
+                            // 计算合适的inSampleSize
+                            inSampleSize = calculateInSampleSize(this, 200, 200) // 目标尺寸200x200
+                            inJustDecodeBounds = false
+                        }
+                        
+                        // 重新打开输入流以再次读取图片
+                        val inputStreamForDecode = context.contentResolver.openInputStream(imageUri)
+                        if (inputStreamForDecode != null) {
+                            val loadedBitmap = android.graphics.BitmapFactory.decodeStream(inputStreamForDecode, null, options)
+                            if (loadedBitmap != null) {
+                                // 切换回主线程更新状态
+                                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                    bitmap = loadedBitmap
+                                }
+                            }
+                            inputStreamForDecode.close()
+                        }
+                        inputStream.close()
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    Log.e("ThumbnailDisplay", "Error loading thumbnail: ${e.message}")
+                }
+            }
+        }
+    }
+    
+    bitmap?.let { thumbnailBitmap ->
+        androidx.compose.foundation.Image(
+            bitmap = thumbnailBitmap.asImageBitmap(),
+            contentDescription = "最近拍攝的照片縮圖",
+            modifier = modifier
+                .size(80.dp)
+                .border(2.dp, BlueAccent, RoundedCornerShape(8.dp))
+                .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+        )
+    }
+}
+
+/**
+ * 计算适当的inSampleSize值以优化内存使用
+ */
+fun calculateInSampleSize(options: android.graphics.BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
+    val (height: Int, width: Int) = options.run { outHeight to outWidth }
+    var inSampleSize = 1
+
+    if (height > reqHeight || width > reqWidth) {
+        val halfHeight: Int = height / 2
+        val halfWidth: Int = width / 2
+
+        // 计算最大的inSampleSize值，该值使最终的缩放尺寸大于等于目标尺寸
+        while (halfHeight / inSampleSize >= reqHeight && halfWidth / inSampleSize >= reqWidth) {
+            inSampleSize *= 2
+        }
+    }
+
+    return inSampleSize
+}
 
 @Composable
 fun CameraPreview(
