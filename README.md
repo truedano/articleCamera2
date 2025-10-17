@@ -11,6 +11,12 @@ Article Camera 2 是一個 Android 應用程式，可以透過相機拍攝文章
 - **題數控制**：可設定生成題目的數量（2-10 題）
 - **答題功能**：內建答題界面，可回答生成的選擇題
 - **成績評分**：自動評分並顯示答題結果
+- **連續拍攝模式**：支援連續拍攝多張照片，便於捕獲更多內容
+- **多張圖片處理**：支援一次選擇多張圖片進行文字提取
+- **相片庫選取**：可以直接從相片庫選取圖片進行文字提取
+- **長按功能**：長按相機按鈕可開啟選單，提供更多選項
+- **快速說明**：提供長按提示說明，幫助用戶了解功能
+- **改進的UI體驗**：優化的相機界面和更流暢的用戶體驗
 
 ## 技術架構
 
@@ -78,7 +84,10 @@ app/
 │   │   ├── QuestionScreen.kt  # 答題頁面
 │   │   ├── QuestionSettingsScreen.kt # 問題設定頁面
 │   │   ├── QuestionViewModel.kt # 問題檢視模型
-│   │   └── theme/             # 應用程式主題
+│   │   ├── theme/             # 應用程式主題
+│   │   │   ├── Color.kt       # 色彩配置
+│   │   │   ├── Theme.kt       # 應用程式主題
+│   │   │   └── Type.kt        # 字體配置
 │   └── MainActivity.kt        # 主活動入口點
 ```
 
@@ -92,6 +101,12 @@ app/
 - `androidx.compose.*` - Jetpack Compose UI 框架
 - `androidx.lifecycle:*` - Android Lifecycle 組件
 - `androidx.material3` - Material Design 3 支援
+- `androidx.core.ktx` - Android Core KTX
+- `androidx.lifecycle.runtime.ktx` - Lifecycle Runtime KTX
+- `androidx.lifecycle.runtime.compose` - Lifecycle Compose Integration
+- `androidx.lifecycle.viewmodel.compose` - ViewModel Compose Integration
+- `androidx.compose.material` - Material Design Components
+- `androidx.compose.material.icons.extended` - Extended Material Icons
 
 ## 權限說明
 
@@ -100,9 +115,49 @@ app/
 - `CAMERA` - 用於拍照功能
 - `WRITE_EXTERNAL_STORAGE` - 用於儲存拍攝的圖片 (API 等級 28 以下)
 
+## 建置配置
+
+- **編譯 SDK**：36
+- **最低 SDK**：29
+- **目標 SDK**：36
+- **Kotlin 版本**：2.2.20
+- **AGP 版本**：8.13.0
+- **JVM 工具鏈**：11
+- **Compose**：已啟用
+- **BuildConfig**：已啟用
+
 ## 貢獻
 
 歡迎提交 Issue 和 Pull Request 來改善這個專案！
+
+## 近期功能更新
+
+### 最新版本功能 (自 commit 76cb71c4 以來)
+
+1. **連續拍攝與多圖處理**
+   - 新增連續拍攝模式，可在相機界面進行連續拍照
+   - 支援多張圖片同時處理，一次性提取多張圖片的文字內容
+   - 優化的 `ImageToTextConverter` 支援單圖或多圖處理
+
+2. **相片庫選取功能**
+   - 新增從相片庫選取圖片的功能
+   - 支援多張圖片選取與處理
+   - 改進的圖片載入與處理流程
+
+3. **相機界面優化**
+   - 長按相機按鈕可開啟功能選單
+   - 新增長按提示說明，5秒後自動消失
+   - 改進的UI/UX設計與互動體驗
+
+4. **底層架構改進**
+   - 新增 `onImageCaptured` 回調功能
+   - 優化的 `CameraUtils` 包含 `capturePhotoOnly` 方法
+   - 改進的圖片URI處理機制
+
+5. **程式碼結構優化**
+   - 改進的錯誤處理與異常管理
+   - 優化的UI狀態管理
+   - 改進的線程處理與API調用
 
 ## 授權
 
