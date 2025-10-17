@@ -93,31 +93,40 @@ fun CameraScreen(
         onNeedPermission()
     }
     
-    // Launcher for selecting image from gallery
+    // Launcher for selecting multiple images from gallery
     val imagePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri ->
-        uri?.let { selectedUri ->
-            // Process the selected image with AI
+        contract = ActivityResultContracts.GetMultipleContents()
+    ) { uris ->
+        if (uris.isNotEmpty()) {
+            // Process the selected images with AI
             val apiKeyManager = com.truedano.articlecamera2.model.ApiKeyManager(context)
             val apiKey = apiKeyManager.getApiKey()
             
             if (apiKey.isEmpty()) {
                 Toast.makeText(context, "請先設定API金鑰", Toast.LENGTH_LONG).show()
                 onNavigateToApiKey()
-                return@let
+                return@rememberLauncherForActivityResult
             }
             
-            // Process the selected image using ImageToTextConverter
+            // Process the selected images using ImageToTextConverter
             isProcessing = true
             showProcessingDialog = true
             
             Thread {
                 try {
                     val imageToTextConverter = com.truedano.articlecamera2.model.ImageToTextConverter()
-                    val result = kotlinx.coroutines.runBlocking {
-                        imageToTextConverter.convertImageToTextDirectly(context, selectedUri, apiKey)
+                    val results = mutableListOf<String>()
+                    
+                    // Process each image
+                    for (uri in uris) {
+                        val result = kotlinx.coroutines.runBlocking {
+                            imageToTextConverter.convertImageToTextDirectly(context, uri, apiKey)
+                        }
+                        results.add(result)
                     }
+                    
+                    // Combine all results (for multiple images)
+                    val combinedResult = results.joinToString("\n\n---\n\n") { it.trim() }
                     
                     // Switch back to main thread for UI updates
                     context.mainLooper?.let { looper ->
@@ -125,12 +134,12 @@ fun CameraScreen(
                         mainHandler.post {
                             isProcessing = false
                             showProcessingDialog = false
-                            onNavigateToQuestionSettings(result)
+                            onNavigateToQuestionSettings(combinedResult)
                         }
                     } ?: run {
                         isProcessing = false
                         showProcessingDialog = false
-                        onNavigateToQuestionSettings(result)
+                        onNavigateToQuestionSettings(combinedResult)
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -448,10 +457,10 @@ fun CameraScreen(
                         .background(DarkCharcoalBackground)
                 ) {
                     DropdownMenuItem(
-                        text = { Text("單選圖片", color = Color.White) },
+                        text = { Text("選擇圖片", color = Color.White) },
                         onClick = {
                             showCameraMenu = false
-                            // Launch the image picker
+                            // Launch the image picker (supports multiple images)
                             imagePickerLauncher.launch("image/*")
                         }
                     )
