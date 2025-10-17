@@ -42,6 +42,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -86,6 +87,9 @@ fun CameraScreen(
     var isProcessing by remember { mutableStateOf(false) }
     var showProcessingDialog by remember { mutableStateOf(false) }
     var showCameraMenu by remember { mutableStateOf(false) }
+    var isContinuousMode by remember { mutableStateOf(false) }
+    var continuousPhotoCount by remember { mutableIntStateOf(0) }
+    var capturedImageUris by remember { mutableStateOf<List<android.net.Uri>>(emptyList()) }
     val context = LocalContext.current
 
     // Request permission if not granted
@@ -385,13 +389,14 @@ fun CameraScreen(
                     )
                 }
             } else {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .border(3.dp, LightGrayBorder, CircleShape)
-                        .background(BlueAccent, CircleShape)
-                        .combinedClickable(
-                            onClick = {
+                // 顯示連續拍照模式的 UI，當處於連續拍照模式時
+                if (isContinuousMode) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .border(3.dp, LightGrayBorder, CircleShape)
+                            .background(BlueAccent, CircleShape) // 保持藍色背景以進行拍照
+                            .clickable {
                                 if (hasCameraPermission && isCameraReady && imageCapture != null && !isProcessing) {
                                     // 檢查API Key和Model是否正確設定
                                     val apiKeyManager = com.truedano.articlecamera2.model.ApiKeyManager(context)
@@ -405,25 +410,20 @@ fun CameraScreen(
                                         Toast.makeText(context, "請先設定模型", Toast.LENGTH_LONG).show()
                                         onNavigateToApiKey()
                                     } else {
+                                        // 在連續拍照模式下僅捕獲照片，不進行AI處理
                                         isProcessing = true
-                                        showProcessingDialog = true
-                                        CameraUtils.takePhoto(
+                                        CameraUtils.capturePhotoOnly(
                                             imageCapture = imageCapture!!,
                                             context = context,
-                                            onImageSaved = { result ->
-                                                // The image has been processed by Gemini, and the result is available in 'result'
-                                                // The result is already logged in the ImageToTextConverter
-                                            },
-                                            onArticleExtracted = { articleText ->
-                                                // 當文章內容提取完成後，導向問題設定頁面
+                                            onImageCaptured = { uri ->
+                                                // 儲存圖片 URI 用於後續處理
+                                                capturedImageUris = capturedImageUris + uri
+                                                // 更新照片計數
+                                                continuousPhotoCount++
                                                 isProcessing = false
-                                                showProcessingDialog = false
-                                                onNavigateToQuestionSettings(articleText)
                                             },
                                             onError = {
-                                                // 如果發生錯誤，也要將處理狀態設為false
                                                 isProcessing = false
-                                                showProcessingDialog = false
                                             }
                                         )
                                     }
@@ -434,13 +434,181 @@ fun CameraScreen(
                                 } else {
                                     Toast.makeText(context, "相機尚未準備完成，請稍後再試", Toast.LENGTH_SHORT).show()
                                 }
-                            },
-                            onLongClick = {
-                                showCameraMenu = true
                             }
+                            .semantics { contentDescription = "連續拍照按鈕" }
+                    )
+                    
+                    // 顯示「結束」按鈕（覆蓋在拍照按鈕上方）
+                    Box(
+                        modifier = Modifier
+                            .size(30.dp)
+                            .align(Alignment.TopEnd)
+                            .offset(10.dp, (-10).dp)
+                            .border(2.dp, LightGrayBorder, CircleShape)
+                            .background(Color.Red, CircleShape)
+                            .clickable {
+                                // 結束連續拍照模式
+                                if (capturedImageUris.isNotEmpty()) {
+                                    // 如果已拍攝照片，處理這些照片
+                                    isProcessing = true
+                                    showProcessingDialog = true
+                                    
+                                    Thread {
+                                        try {
+                                            val apiKeyManager = com.truedano.articlecamera2.model.ApiKeyManager(context)
+                                            val apiKey = apiKeyManager.getApiKey()
+                                            val imageToTextConverter = com.truedano.articlecamera2.model.ImageToTextConverter()
+                                            
+                                            // Process all captured images using ImageToTextConverter
+                                            val result = kotlinx.coroutines.runBlocking {
+                                                imageToTextConverter.convertMultipleImagesToTextDirectly(context, capturedImageUris, apiKey)
+                                            }
+                                            
+                                            // Switch back to main thread for UI updates
+                                            context.mainLooper?.let { looper ->
+                                                val mainHandler = android.os.Handler(looper)
+                                                mainHandler.post {
+                                                    isProcessing = false
+                                                    showProcessingDialog = false
+                                                    isContinuousMode = false
+                                                    capturedImageUris = emptyList()
+                                                    continuousPhotoCount = 0
+                                                    onNavigateToQuestionSettings(result)
+                                                }
+                                            } ?: run {
+                                                isProcessing = false
+                                                showProcessingDialog = false
+                                                isContinuousMode = false
+                                                capturedImageUris = emptyList()
+                                                continuousPhotoCount = 0
+                                                onNavigateToQuestionSettings(result)
+                                            }
+                                        } catch (e: Exception) {
+                                            e.printStackTrace()
+                                            context.mainLooper?.let { looper ->
+                                                val mainHandler = android.os.Handler(looper)
+                                                mainHandler.post {
+                                                    isProcessing = false
+                                                    showProcessingDialog = false
+                                                    isContinuousMode = false
+                                                    capturedImageUris = emptyList()
+                                                    continuousPhotoCount = 0
+                                                    Toast.makeText(context, "處理圖片失敗: ${e.message}", Toast.LENGTH_LONG).show()
+                                                }
+                                            }
+                                        }
+                                    }.start()
+                                } else {
+                                    // 如果沒有拍攝照片，直接退出連續拍照模式
+                                    isContinuousMode = false
+                                    continuousPhotoCount = 0
+                                }
+                            }
+                    ) {
+                        Text(
+                            text = "X",
+                            color = Color.White,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.align(Alignment.Center)
                         )
-                        .semantics { contentDescription = "拍照按鈕" }
-                )
+                    }
+                    
+                    // 顯示拍攝照片數量（在按鈕上方）
+                    Text(
+                        text = " $continuousPhotoCount ",
+                        color = Color.Yellow,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .offset((-10).dp, (-10).dp)
+                            .background(Color.Black.copy(alpha = 0.6f), CircleShape)
+                            .padding(horizontal = 4.dp, vertical = 2.dp)
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .border(3.dp, LightGrayBorder, CircleShape)
+                            .background(BlueAccent, CircleShape)
+                            .combinedClickable(
+                                onClick = {
+                                    if (hasCameraPermission && isCameraReady && imageCapture != null && !isProcessing) {
+                                        // 檢查API Key和Model是否正確設定
+                                        val apiKeyManager = com.truedano.articlecamera2.model.ApiKeyManager(context)
+                                        val apiKey = apiKeyManager.getApiKey()
+                                        val model = apiKeyManager.getModel()
+                                        
+                                        if (apiKey.isEmpty()) {
+                                            Toast.makeText(context, "請先設定API金鑰", Toast.LENGTH_LONG).show()
+                                            onNavigateToApiKey()
+                                        } else if (model.isEmpty()) {
+                                            Toast.makeText(context, "請先設定模型", Toast.LENGTH_LONG).show()
+                                            onNavigateToApiKey()
+                                        } else {
+                                            if (isContinuousMode) {
+                                                // 在連續拍照模式下拍照
+                                                isProcessing = true
+                                                CameraUtils.takePhoto(
+                                                    imageCapture = imageCapture!!,
+                                                    context = context,
+                                                    onImageSaved = { result ->
+                                                        // 更新照片計數
+                                                        continuousPhotoCount++
+                                                        isProcessing = false
+                                                    },
+                                                    onArticleExtracted = { articleText ->
+                                                        // 在連續拍照模式下，不立即導航
+                                                    },
+                                                    onError = {
+                                                        isProcessing = false
+                                                    },
+                                                    onImageCaptured = { uri ->
+                                                        // 儲存圖片 URI 用於後續處理
+                                                        capturedImageUris = capturedImageUris + uri
+                                                    }
+                                                )
+                                            } else {
+                                                // 一般拍照模式
+                                                isProcessing = true
+                                                showProcessingDialog = true
+                                                CameraUtils.takePhoto(
+                                                    imageCapture = imageCapture!!,
+                                                    context = context,
+                                                    onImageSaved = { result ->
+                                                        // The image has been processed by Gemini, and the result is available in 'result'
+                                                        // The result is already logged in the ImageToTextConverter
+                                                    },
+                                                    onArticleExtracted = { articleText ->
+                                                        // 當文章內容提取完成後，導向問題設定頁面
+                                                        isProcessing = false
+                                                        showProcessingDialog = false
+                                                        onNavigateToQuestionSettings(articleText)
+                                                    },
+                                                    onError = {
+                                                        // 如果發生錯誤，也要將處理狀態設為false
+                                                        isProcessing = false
+                                                        showProcessingDialog = false
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    } else if (!hasCameraPermission) {
+                                        onNeedPermission()
+                                    } else if (isProcessing) {
+                                        Toast.makeText(context, "正在處理圖片中，請稍候...", Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        Toast.makeText(context, "相機尚未準備完成，請稍後再試", Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                                onLongClick = {
+                                    showCameraMenu = true
+                                }
+                            )
+                            .semantics { contentDescription = "拍照按鈕" }
+                    )
+                }
                 
                 // 拍照功能選單
                 DropdownMenu(
@@ -455,6 +623,16 @@ fun CameraScreen(
                             showCameraMenu = false
                             // Launch the image picker (supports multiple images)
                             imagePickerLauncher.launch("image/*")
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("連續拍照", color = Color.White) },
+                        onClick = {
+                            showCameraMenu = false
+                            // Enter continuous shooting mode
+                            isContinuousMode = true
+                            continuousPhotoCount = 0
+                            capturedImageUris = emptyList()
                         }
                     )
                 }

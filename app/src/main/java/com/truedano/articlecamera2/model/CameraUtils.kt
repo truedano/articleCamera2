@@ -19,7 +19,8 @@ class CameraUtils {
             context: Context,
             onImageSaved: (String) -> Unit = {},
             onArticleExtracted: (String) -> Unit = {},
-            onError: () -> Unit = {}
+            onError: () -> Unit = {},
+            onImageCaptured: (android.net.Uri) -> Unit = {}
         ) {
             // Get the API key and model from ApiKeyManager
             val apiKeyManager = ApiKeyManager(context)
@@ -91,6 +92,9 @@ class CameraUtils {
 
                         // Extract the file path from URI for ImageToTextConverter
                         savedUri?.let { uri ->
+                            // Call the onImageCaptured callback to notify that an image has been captured
+                            onImageCaptured(uri)
+                            
                             if (apiKey.isNotEmpty()) {
                                 // Run the image processing on a background thread
                                 Thread {
@@ -128,6 +132,62 @@ class CameraUtils {
                                     }
                                 }.start()
                             }
+                        } ?: run {
+                            // If savedUri is null, still notify that an image was captured
+                            onImageCaptured(android.net.Uri.EMPTY)
+                        }
+                    }
+                }
+            )
+        }
+
+        fun capturePhotoOnly(
+            imageCapture: ImageCapture,
+            context: Context,
+            onImageCaptured: (android.net.Uri) -> Unit = {},
+            onError: () -> Unit = {}
+        ) {
+            // 檢查是否支援相機功能
+            if (androidx.core.content.ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                return
+            }
+
+            val name = SimpleDateFormat(FILENAME_FORMAT, Locale.US).format(System.currentTimeMillis())
+
+            // For Android 10+ (API 29+), use MediaStore (which is always the case since minSdk=29)
+            val contentValues = android.content.ContentValues().apply {
+                put(android.provider.MediaStore.Images.Media.DISPLAY_NAME, "${name}.jpg")
+                put(android.provider.MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+                put(android.provider.MediaStore.Images.Media.RELATIVE_PATH, android.os.Environment.DIRECTORY_PICTURES + "/ArticleCamera2")
+            }
+
+            val outputOptions = ImageCapture.OutputFileOptions.Builder(
+                context.contentResolver,
+                android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                contentValues
+            ).build()
+
+            // 設置照片捕獲的回調
+            imageCapture.takePicture(
+                outputOptions,
+                androidx.core.content.ContextCompat.getMainExecutor(context),
+                object : ImageCapture.OnImageSavedCallback {
+                    override fun onError(exception: ImageCaptureException) {
+                        exception.printStackTrace()
+                        Toast.makeText(context, "拍照失敗: ${exception.message}", Toast.LENGTH_LONG).show()
+                        onError()
+                    }
+
+                    override fun onImageSaved(output: ImageCapture.OutputFileResults) {
+                        // For Android 10+, the URI should be provided and image is already saved to MediaStore
+                        val savedUri = output.savedUri
+
+                        // Call the onImageCaptured callback to notify that an image has been captured
+                        savedUri?.let { uri ->
+                            onImageCaptured(uri)
+                        } ?: run {
+                            // If savedUri is null, still notify that an image was captured
+                            onImageCaptured(android.net.Uri.EMPTY)
                         }
                     }
                 }
