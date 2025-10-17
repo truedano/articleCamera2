@@ -64,6 +64,11 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import androidx.compose.runtime.rememberCoroutineScope
 import com.truedano.articlecamera2.model.CameraUtils
 import com.truedano.articlecamera2.model.VersionUtils
 import com.truedano.articlecamera2.ui.theme.BlueAccent
@@ -94,6 +99,7 @@ fun CameraScreen(
     var capturedImageUris by remember { mutableStateOf<List<android.net.Uri>>(emptyList()) }
     var lastCapturedImageUri by remember { mutableStateOf<android.net.Uri?>(null) } // 添加状态变量存储最近拍摄图片的URI
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     // Request permission if not granted
     if (!hasCameraPermission) {
@@ -105,54 +111,46 @@ fun CameraScreen(
         contract = ActivityResultContracts.GetMultipleContents()
     ) { uris ->
         if (uris.isNotEmpty()) {
-            // Process the selected images with AI
-            val apiKeyManager = com.truedano.articlecamera2.model.ApiKeyManager(context)
-            val apiKey = apiKeyManager.getApiKey()
-            
-            if (apiKey.isEmpty()) {
-                Toast.makeText(context, "請先設定API金鑰", Toast.LENGTH_LONG).show()
-                onNavigateToApiKey()
-                return@rememberLauncherForActivityResult
-            }
-            
-            // Process the selected images using ImageToTextConverter
-            isProcessing = true
-            showProcessingDialog = true
-            
-            Thread {
+            scope.launch {
+                // Process the selected images with AI
+                val apiKeyManager = com.truedano.articlecamera2.model.ApiKeyManager(context)
+                val apiKey = apiKeyManager.getApiKey()
+                
+                if (apiKey.isEmpty()) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(context, "請先設定API金鑰", Toast.LENGTH_LONG).show()
+                        onNavigateToApiKey()
+                    }
+                    return@launch
+                }
+                
+                // Process the selected images using ImageToTextConverter
+                withContext(Dispatchers.Main) {
+                    isProcessing = true
+                    showProcessingDialog = true
+                }
+                
                 try {
                     val imageToTextConverter = com.truedano.articlecamera2.model.ImageToTextConverter()
                     
                     // Process all images in a single API call
-                    val result = kotlinx.coroutines.runBlocking {
-                        imageToTextConverter.convertMultipleImagesToTextDirectly(context, uris, apiKey)
-                    }
+                    val result = imageToTextConverter.convertMultipleImagesToTextDirectly(context, uris, apiKey)
                     
-                    // Switch back to main thread for UI updates
-                    context.mainLooper?.let { looper ->
-                        val mainHandler = android.os.Handler(looper)
-                        mainHandler.post {
-                            isProcessing = false
-                            showProcessingDialog = false
-                            onNavigateToQuestionSettings(result)
-                        }
-                    } ?: run {
+                    // Update UI on main thread
+                    withContext(Dispatchers.Main) {
                         isProcessing = false
                         showProcessingDialog = false
                         onNavigateToQuestionSettings(result)
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
-                    context.mainLooper?.let { looper ->
-                        val mainHandler = android.os.Handler(looper)
-                        mainHandler.post {
-                            isProcessing = false
-                            showProcessingDialog = false
-                            Toast.makeText(context, "處理圖片失敗: ${e.message}", Toast.LENGTH_LONG).show()
-                        }
+                    withContext(Dispatchers.Main) {
+                        isProcessing = false
+                        showProcessingDialog = false
+                        Toast.makeText(context, "處理圖片失敗: ${e.message}", Toast.LENGTH_LONG).show()
                     }
                 }
-            }.start()
+            }
         }
     }
 
@@ -384,7 +382,7 @@ fun CameraScreen(
             
             // 使用副作用在5秒後隱藏提示
             androidx.compose.runtime.LaunchedEffect(Unit) {
-                kotlinx.coroutines.delay(5000) // 5秒
+                delay(5000) // 5秒
                 showLongPressHint = false
             }
         }
@@ -445,10 +443,20 @@ fun CameraScreen(
                                                 continuousPhotoCount++
                                                 // 更新最近拍攝的圖片URI以顯示縮圖
                                                 lastCapturedImageUri = uri
-                                                isProcessing = false
+                                                // Use coroutine scope to update UI after a short delay to ensure UI responsiveness
+                                                scope.launch {
+                                                    delay(100) // Small delay to allow UI to update
+                                                    withContext(Dispatchers.Main) {
+                                                        isProcessing = false
+                                                    }
+                                                }
                                             },
                                             onError = {
-                                                isProcessing = false
+                                                scope.launch {
+                                                    withContext(Dispatchers.Main) {
+                                                        isProcessing = false
+                                                    }
+                                                }
                                             }
                                         )
                                     }
@@ -475,32 +483,22 @@ fun CameraScreen(
                                 // 結束連續拍照模式
                                 if (capturedImageUris.isNotEmpty()) {
                                     // 如果已拍攝照片，處理這些照片
-                                    isProcessing = true
-                                    showProcessingDialog = true
-                                    
-                                    Thread {
+                                    scope.launch {
+                                        withContext(Dispatchers.Main) {
+                                            isProcessing = true
+                                            showProcessingDialog = true
+                                        }
+                                        
                                         try {
                                             val apiKeyManager = com.truedano.articlecamera2.model.ApiKeyManager(context)
                                             val apiKey = apiKeyManager.getApiKey()
                                             val imageToTextConverter = com.truedano.articlecamera2.model.ImageToTextConverter()
                                             
                                             // Process all captured images using ImageToTextConverter
-                                            val result = kotlinx.coroutines.runBlocking {
-                                                imageToTextConverter.convertMultipleImagesToTextDirectly(context, capturedImageUris, apiKey)
-                                            }
+                                            val result = imageToTextConverter.convertMultipleImagesToTextDirectly(context, capturedImageUris, apiKey)
                                             
-                                            // Switch back to main thread for UI updates
-                                            context.mainLooper?.let { looper ->
-                                                val mainHandler = android.os.Handler(looper)
-                                                mainHandler.post {
-                                                    isProcessing = false
-                                                    showProcessingDialog = false
-                                                    isContinuousMode = false
-                                                    capturedImageUris = emptyList()
-                                                    continuousPhotoCount = 0
-                                                    onNavigateToQuestionSettings(result)
-                                                }
-                                            } ?: run {
+                                            // Update UI on main thread
+                                            withContext(Dispatchers.Main) {
                                                 isProcessing = false
                                                 showProcessingDialog = false
                                                 isContinuousMode = false
@@ -510,23 +508,24 @@ fun CameraScreen(
                                             }
                                         } catch (e: Exception) {
                                             e.printStackTrace()
-                                            context.mainLooper?.let { looper ->
-                                                val mainHandler = android.os.Handler(looper)
-                                                mainHandler.post {
-                                                    isProcessing = false
-                                                    showProcessingDialog = false
-                                                    isContinuousMode = false
-                                                    capturedImageUris = emptyList()
-                                                    continuousPhotoCount = 0
-                                                    Toast.makeText(context, "處理圖片失敗: ${e.message}", Toast.LENGTH_LONG).show()
-                                                }
+                                            withContext(Dispatchers.Main) {
+                                                isProcessing = false
+                                                showProcessingDialog = false
+                                                isContinuousMode = false
+                                                capturedImageUris = emptyList()
+                                                continuousPhotoCount = 0
+                                                Toast.makeText(context, "處理圖片失敗: ${e.message}", Toast.LENGTH_LONG).show()
                                             }
                                         }
-                                    }.start()
+                                    }
                                 } else {
                                     // 如果沒有拍攝照片，直接退出連續拍照模式
-                                    isContinuousMode = false
-                                    continuousPhotoCount = 0
+                                    scope.launch {
+                                        withContext(Dispatchers.Main) {
+                                            isContinuousMode = false
+                                            continuousPhotoCount = 0
+                                        }
+                                    }
                                 }
                             }
                     ) {
@@ -580,14 +579,23 @@ fun CameraScreen(
                                                     context = context,
                                                     onImageSaved = { result ->
                                                         // 更新照片計數
-                                                        continuousPhotoCount++
-                                                        isProcessing = false
+                                                        scope.launch {
+                                                            delay(100) // Small delay to allow UI to update
+                                                            withContext(Dispatchers.Main) {
+                                                                continuousPhotoCount++
+                                                                isProcessing = false
+                                                            }
+                                                        }
                                                     },
                                                     onArticleExtracted = { articleText ->
                                                         // 在連續拍照模式下，不立即導航
                                                     },
                                                     onError = {
-                                                        isProcessing = false
+                                                        scope.launch {
+                                                            withContext(Dispatchers.Main) {
+                                                                isProcessing = false
+                                                            }
+                                                        }
                                                     },
                                                     onImageCaptured = { uri ->
                                                         // 儲存圖片 URI 用於後續處理
@@ -610,31 +618,49 @@ fun CameraScreen(
                                                     Toast.makeText(context, "請先設定模型", Toast.LENGTH_LONG).show()
                                                     onNavigateToApiKey()
                                                 } else {
-                                                    isProcessing = true
-                                                    showProcessingDialog = true
-                                                    CameraUtils.takePhoto(
-                                                        imageCapture = imageCapture!!,
-                                                        context = context,
-                                                        onImageSaved = { result ->
-                                                            // The image has been processed by Gemini, and the result is available in 'result'
-                                                            // The result is already logged in the ImageToTextConverter
-                                                        },
-                                                        onArticleExtracted = { articleText ->
-                                                            // 當文章內容提取完成後，導向問題設定頁面
-                                                            isProcessing = false
-                                                            showProcessingDialog = false
-                                                            onNavigateToQuestionSettings(articleText)
-                                                        },
-                                                        onError = {
-                                                            // 如果發生錯誤，也要將處理狀態設為false
-                                                            isProcessing = false
-                                                            showProcessingDialog = false
-                                                        },
-                                                        onImageCaptured = { uri ->
-                                                            // 更新最近拍攝的圖片URI以顯示縮圖
-                                                            lastCapturedImageUri = uri
+                                                    scope.launch {
+                                                        withContext(Dispatchers.Main) {
+                                                            isProcessing = true
+                                                            showProcessingDialog = true
                                                         }
-                                                    )
+                                                        
+                                                        // Use the CameraUtils.takePhoto function which now handles coroutines internally
+                                                        CameraUtils.takePhoto(
+                                                            imageCapture = imageCapture!!,
+                                                            context = context,
+                                                            onImageSaved = { result ->
+                                                                // The image has been processed by Gemini, and the result is available in 'result'
+                                                                // The result is already logged in the ImageToTextConverter
+                                                            },
+                                                            onArticleExtracted = { articleText ->
+                                                                // 當文章內容提取完成後，導向問題設定頁面
+                                                                scope.launch {
+                                                                    withContext(Dispatchers.Main) {
+                                                                        isProcessing = false
+                                                                        showProcessingDialog = false
+                                                                        onNavigateToQuestionSettings(articleText)
+                                                                    }
+                                                                }
+                                                            },
+                                                            onError = {
+                                                                // 如果發生錯誤，也要將處理狀態設為false
+                                                                scope.launch {
+                                                                    withContext(Dispatchers.Main) {
+                                                                        isProcessing = false
+                                                                        showProcessingDialog = false
+                                                                    }
+                                                                }
+                                                            },
+                                                            onImageCaptured = { uri ->
+                                                                // 更新最近拍攝的圖片URI以顯示縮圖
+                                                                scope.launch {
+                                                                    withContext(Dispatchers.Main) {
+                                                                        lastCapturedImageUri = uri
+                                                                    }
+                                                                }
+                                                            }
+                                                        )
+                                                    }
                                                 }
                                             }
                                         }
@@ -697,44 +723,47 @@ fun ThumbnailDisplay(
 ) {
     val context = LocalContext.current
     var bitmap by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
+    val scope = rememberCoroutineScope()
     
     // 使用 LaunchedEffect 來載入圖片，使用 imageUri 作為 key
     LaunchedEffect(imageUri) {
         bitmap = null // 重置圖片
         if (imageUri != android.net.Uri.EMPTY) {
-            // 在IO线程中加载图像
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                try {
-                    val inputStream = context.contentResolver.openInputStream(imageUri)
-                    if (inputStream != null) {
-                        // 使用inSampleSize创建缩略图以提高性能
-                        val options = android.graphics.BitmapFactory.Options().apply {
-                            inJustDecodeBounds = true
-                            // 先获取图片尺寸
-                            android.graphics.BitmapFactory.decodeStream(inputStream, null, this)
-                            
-                            // 计算合适的inSampleSize
-                            inSampleSize = calculateInSampleSize(this, 200, 200) // 目标尺寸200x200
-                            inJustDecodeBounds = false
-                        }
-                        
-                        // 重新打开输入流以再次读取图片
-                        val inputStreamForDecode = context.contentResolver.openInputStream(imageUri)
-                        if (inputStreamForDecode != null) {
-                            val loadedBitmap = android.graphics.BitmapFactory.decodeStream(inputStreamForDecode, null, options)
-                            if (loadedBitmap != null) {
-                                // 切换回主线程更新状态
-                                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                                    bitmap = loadedBitmap
-                                }
+            scope.launch {
+                // 在IO线程中加载图像
+                withContext(Dispatchers.IO) {
+                    try {
+                        val inputStream = context.contentResolver.openInputStream(imageUri)
+                        if (inputStream != null) {
+                            // 使用inSampleSize创建缩略图以提高性能
+                            val options = android.graphics.BitmapFactory.Options().apply {
+                                inJustDecodeBounds = true
+                                // 先获取图片尺寸
+                                android.graphics.BitmapFactory.decodeStream(inputStream, null, this)
+                                
+                                // 计算合适的inSampleSize
+                                inSampleSize = calculateInSampleSize(this, 200, 200) // 目标尺寸200x200
+                                inJustDecodeBounds = false
                             }
-                            inputStreamForDecode.close()
+                            
+                            // 重新打开输入流以再次读取图片
+                            val inputStreamForDecode = context.contentResolver.openInputStream(imageUri)
+                            if (inputStreamForDecode != null) {
+                                val loadedBitmap = android.graphics.BitmapFactory.decodeStream(inputStreamForDecode, null, options)
+                                if (loadedBitmap != null) {
+                                    // 切换回主线程更新状态
+                                    withContext(Dispatchers.Main) {
+                                        bitmap = loadedBitmap
+                                    }
+                                }
+                                inputStreamForDecode.close()
+                            }
+                            inputStream.close()
                         }
-                        inputStream.close()
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        Log.e("ThumbnailDisplay", "Error loading thumbnail: ${e.message}")
                     }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    Log.e("ThumbnailDisplay", "Error loading thumbnail: ${e.message}")
                 }
             }
         }

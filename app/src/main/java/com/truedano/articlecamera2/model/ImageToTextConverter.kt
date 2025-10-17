@@ -7,6 +7,8 @@ import android.net.Uri
 import android.util.Log
 import com.google.ai.client.generativeai.GenerativeModel
 import com.google.ai.client.generativeai.type.content
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class ImageToTextConverter() {
 
@@ -36,78 +38,87 @@ class ImageToTextConverter() {
      * @return The text extracted from the images.
      */
     suspend fun convertMultipleImagesToTextDirectly(context: Context, uris: List<Uri>, apiKey: String): String {
-        return try {
-            // Load and optimize all images from the URIs
-            val bitmaps = mutableListOf<Bitmap>()
-            for (imageUri in uris) {
-                val bitmap = loadAndOptimizeBitmapFromUri(context, imageUri)
-                if (bitmap != null) {
-                    bitmaps.add(bitmap)
-                } else {
-                    Log.e(TAG, "Failed to load bitmap from URI: $imageUri")
-                }
-            }
-            
-            if (bitmaps.isEmpty()) {
-                Log.e(TAG, "Failed to load any bitmaps from URIs: $uris")
-                return "Error: Failed to load any images"
-            }
-
-            // Get the model name from ApiKeyManager
-            val apiKeyManager = ApiKeyManager(context)
-            val configuredModel = apiKeyManager.getModel()
-            
-            // Define a list of models to try in order of preference
-            val modelsToTry = listOf(configuredModel, "gemini-2.5-flash", "gemini-1.5-pro", "gemini-1.0-pro")
-            
-            var result: String? = null
-            var lastException: Exception? = null
-
-            // Try each model in sequence until one succeeds
-            for (modelName in modelsToTry) {
-                try {
-                    // For models that support images (like gemini-1.5-flash and gemini-pro-vision)
-                    val generativeModel = GenerativeModel(
-                        modelName = modelName,
-                        apiKey = apiKey
-                    )
-
-                    // Create content with image and text prompt
-                    val inputContent = content {
-                        text("Please extract and describe all text content from these images in detail. If there are articles, please format them clearly.")
-                        for (bitmap in bitmaps) {
-                            image(bitmap)
-                        }
+        return withContext(Dispatchers.IO) {
+            try {
+                // Load and optimize all images from the URIs
+                val bitmaps = mutableListOf<Bitmap>()
+                for (imageUri in uris) {
+                    val bitmap = loadAndOptimizeBitmapFromUri(context, imageUri)
+                    if (bitmap != null) {
+                        bitmaps.add(bitmap)
+                    } else {
+                        Log.e(TAG, "Failed to load bitmap from URI: $imageUri")
                     }
-
-                    // Generate content from the images
-                    val response = generativeModel.generateContent(inputContent)
-                    result = response.text ?: "No text generated from the images"
-
-                    Log.d(TAG, "Successfully used model: $modelName")
-                    break // Exit the loop if successful
-
-                } catch (e: Exception) {
-                    Log.w(TAG, "Model $modelName failed: ${e.message}")
-                    lastException = e
-                    // Continue to the next model
                 }
-            }
-            
-            if (result != null) {
-                // Log the output text as requested
-                Log.d(TAG, "Generated text from images: $result")
-                result
-            } else {
-                // If all models failed
-                val errorMsg = "All models failed. Last error: ${lastException?.message}"
-                Log.e(TAG, errorMsg)
-                "Error: $errorMsg"
-            }
+                
+                if (bitmaps.isEmpty()) {
+                    Log.e(TAG, "Failed to load any bitmaps from URIs: $uris")
+                    return@withContext "Error: Failed to load any images"
+                }
 
-        } catch (e: Exception) {
-            Log.e(TAG, "Error during image to text conversion: ${e.message}", e)
-            "Error: ${e.message}"
+                // Get the model name from ApiKeyManager
+                val apiKeyManager = ApiKeyManager(context)
+                val configuredModel = apiKeyManager.getModel()
+                
+                // Define a list of models to try in order of preference
+                val modelsToTry = listOf(configuredModel, "gemini-2.5-flash", "gemini-1.5-pro", "gemini-1.0-pro")
+                
+                var result: String? = null
+                var lastException: Exception? = null
+
+                // Try each model in sequence until one succeeds
+                for (modelName in modelsToTry) {
+                    try {
+                        // For models that support images (like gemini-1.5-flash and gemini-pro-vision)
+                        val generativeModel = GenerativeModel(
+                            modelName = modelName,
+                            apiKey = apiKey
+                        )
+
+                        // Create content with image and text prompt
+                        val inputContent = content {
+                            text("Please extract and describe all text content from these images in detail. If there are articles, please format them clearly.")
+                            for (bitmap in bitmaps) {
+                                image(bitmap)
+                            }
+                        }
+
+                        // Generate content from the images
+                        val response = generativeModel.generateContent(inputContent)
+                        result = response.text ?: "No text generated from the images"
+
+                        Log.d(TAG, "Successfully used model: $modelName")
+                        break // Exit the loop if successful
+
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Model $modelName failed: ${e.message}")
+                        lastException = e
+                        // Continue to the next model
+                    }
+                }
+                
+                // Clean up bitmaps to free memory
+                bitmaps.forEach { bitmap ->
+                    if (!bitmap.isRecycled) {
+                        bitmap.recycle()
+                    }
+                }
+                
+                if (result != null) {
+                    // Log the output text as requested
+                    Log.d(TAG, "Generated text from images: $result")
+                    result
+                } else {
+                    // If all models failed
+                    val errorMsg = "All models failed. Last error: ${lastException?.message}"
+                    Log.e(TAG, errorMsg)
+                    "Error: $errorMsg"
+                }
+
+            } catch (e: Exception) {
+                Log.e(TAG, "Error during image to text conversion: ${e.message}", e)
+                "Error: ${e.message}"
+            }
         }
     }
 
