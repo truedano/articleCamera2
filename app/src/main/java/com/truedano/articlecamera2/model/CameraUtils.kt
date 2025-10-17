@@ -99,6 +99,7 @@ class CameraUtils {
                                         // Create a coroutine scope to handle the suspend function
                                         val result = runBlocking {
                                             // Directly process the image from URI without saving to cache
+                                            // Using the single image method which internally calls the multiple image method with a single image
                                             imageToTextConverter.convertImageToTextDirectly(context, uri, apiKey)
                                         }
                                         // Post the result back to the main thread if needed for UI updates

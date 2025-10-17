@@ -115,18 +115,11 @@ fun CameraScreen(
             Thread {
                 try {
                     val imageToTextConverter = com.truedano.articlecamera2.model.ImageToTextConverter()
-                    val results = mutableListOf<String>()
                     
-                    // Process each image
-                    for (uri in uris) {
-                        val result = kotlinx.coroutines.runBlocking {
-                            imageToTextConverter.convertImageToTextDirectly(context, uri, apiKey)
-                        }
-                        results.add(result)
+                    // Process all images in a single API call
+                    val result = kotlinx.coroutines.runBlocking {
+                        imageToTextConverter.convertMultipleImagesToTextDirectly(context, uris, apiKey)
                     }
-                    
-                    // Combine all results (for multiple images)
-                    val combinedResult = results.joinToString("\n\n---\n\n") { it.trim() }
                     
                     // Switch back to main thread for UI updates
                     context.mainLooper?.let { looper ->
@@ -134,12 +127,12 @@ fun CameraScreen(
                         mainHandler.post {
                             isProcessing = false
                             showProcessingDialog = false
-                            onNavigateToQuestionSettings(combinedResult)
+                            onNavigateToQuestionSettings(result)
                         }
                     } ?: run {
                         isProcessing = false
                         showProcessingDialog = false
-                        onNavigateToQuestionSettings(combinedResult)
+                        onNavigateToQuestionSettings(result)
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()

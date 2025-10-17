@@ -110,6 +110,7 @@ class QuestionGenerator(private val context: Context) {
             3. 解釋簡潔易懂
             4. 問題與文章內容密切相關
             5. 所有${questionCount}道題目都要包含在JSON中
+            6. 如果文章內容來自多張圖片，請整合所有圖片的內容生成問題
         """.trimIndent()
     }
     

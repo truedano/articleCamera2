@@ -24,13 +24,33 @@ class ImageToTextConverter() {
      * @return The text extracted from the image.
      */
     suspend fun convertImageToTextDirectly(context: Context, uri: Uri, apiKey: String): String {
+        return convertMultipleImagesToTextDirectly(context, listOf(uri), apiKey)
+    }
+
+    /**
+     * Converts multiple images from URIs to text using the Gemini API in a single request, without saving to device.
+     *
+     * @param context The context to access the content resolver
+     * @param uris List of URIs of the images to convert
+     * @param apiKey The API key to use for the Gemini API.
+     * @return The text extracted from the images.
+     */
+    suspend fun convertMultipleImagesToTextDirectly(context: Context, uris: List<Uri>, apiKey: String): String {
         return try {
-            // Load and optimize the image from the URI
-            val bitmap = loadAndOptimizeBitmapFromUri(context, uri)
+            // Load and optimize all images from the URIs
+            val bitmaps = mutableListOf<Bitmap>()
+            for (imageUri in uris) {
+                val bitmap = loadAndOptimizeBitmapFromUri(context, imageUri)
+                if (bitmap != null) {
+                    bitmaps.add(bitmap)
+                } else {
+                    Log.e(TAG, "Failed to load bitmap from URI: $imageUri")
+                }
+            }
             
-            if (bitmap == null) {
-                Log.e(TAG, "Failed to load bitmap from URI: $uri")
-                return "Error: Failed to load image"
+            if (bitmaps.isEmpty()) {
+                Log.e(TAG, "Failed to load any bitmaps from URIs: $uris")
+                return "Error: Failed to load any images"
             }
 
             // Get the model name from ApiKeyManager
@@ -54,13 +74,15 @@ class ImageToTextConverter() {
 
                     // Create content with image and text prompt
                     val inputContent = content {
-                        text("Please extract and describe all text content from this image in detail. If there are articles, please format them clearly.")
-                        image(bitmap)
+                        text("Please extract and describe all text content from these images in detail. If there are articles, please format them clearly.")
+                        for (bitmap in bitmaps) {
+                            image(bitmap)
+                        }
                     }
 
-                    // Generate content from the image
+                    // Generate content from the images
                     val response = generativeModel.generateContent(inputContent)
-                    result = response.text ?: "No text generated from the image"
+                    result = response.text ?: "No text generated from the images"
 
                     Log.d(TAG, "Successfully used model: $modelName")
                     break // Exit the loop if successful
@@ -74,7 +96,7 @@ class ImageToTextConverter() {
             
             if (result != null) {
                 // Log the output text as requested
-                Log.d(TAG, "Generated text from image: $result")
+                Log.d(TAG, "Generated text from images: $result")
                 result
             } else {
                 // If all models failed
