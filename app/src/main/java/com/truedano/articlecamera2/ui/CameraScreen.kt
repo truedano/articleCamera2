@@ -9,7 +9,6 @@ import androidx.camera.core.ImageCapture
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
-import androidx.camera.core.AspectRatio
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -832,8 +831,8 @@ fun CameraPreview(
     AndroidView(
         factory = { ctx ->
             val view = PreviewView(ctx).apply {
-                // 使用 FILL_CENTER 確保預覽填滿整個視圖，同時保持比例
-                scaleType = PreviewView.ScaleType.FIT_CENTER
+                // 使用 FILL_START 確保預覽與捕獲內容一致
+                scaleType = PreviewView.ScaleType.FIT_START
             }
             previewView = view
             view
@@ -853,27 +852,22 @@ fun CameraPreview(
                 // Unbind all previous camera use cases if any
                 provider.unbindAll()
                 
-                // 設定圖片捕獲用例，優先使用 4:3 長寬比 (常用於拍照)
+                // 創建一個 UseCaseGroup 來確保預覽和捕獲使用相同的尺寸
+                val preview = Preview.Builder().build()
+                preview.surfaceProvider = view.surfaceProvider
+                
+                // 設定圖片捕獲用例
                 val imageCapture = ImageCapture.Builder()
                     .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
-                    .setTargetAspectRatio(AspectRatio.RATIO_4_3)
                     .setTargetRotation(view.display.rotation)
                     .build()
-                
-                // 設定預覽用例，使用與圖片捕獲相同的長寬比
-                val preview = Preview.Builder()
-                    .setTargetAspectRatio(AspectRatio.RATIO_4_3)
-                    .build()
-                    .also {
-                        it.surfaceProvider = view.surfaceProvider
-                    }
                 
                 onImageCaptureReady(imageCapture)
                 
                 val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
                 
                 try {
-                    // Bind the camera to the lifecycle with same aspect ratio for both use cases
+                    // Bind the camera to the lifecycle
                     provider.bindToLifecycle(
                         lifecycleOwner,
                         cameraSelector,
